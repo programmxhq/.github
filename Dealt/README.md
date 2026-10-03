@@ -32,6 +32,7 @@ Requirements: Xcode 16 or later, iOS 17 or later.
 1. Open `Dealt/Dealt.xcodeproj`.
 2. Choose your Team under *Signing & Capabilities* (bundle id `com.programmx.dealt`).
 3. Run on an iPhone or a simulator.
+4. Run the engine tests with ⌘U (scheme *Dealt*; tests live in `Dealt/DealtTests/`).
 
 The project uses a synchronized folder, so any `.swift` file added to `Dealt/Dealt/` is compiled automatically.
 
