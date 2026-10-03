@@ -5,7 +5,7 @@ ORDERS = {
  'Effect': ['body','mind','heart','bonds','money','income','add','remove','set','clear','text','dies'],
  'Cond': ['min','max','needTraits','noTraits','needFlags','noFlags','minMoney','maxMoney','ambition'],
  'make': ['weight','once','priority','filler','cond'],
- 'gamble': ['win','lose'],
+ 'gamble': ['pct','win','lose'],
 }
 p = get_parser('swift'); bad = 0
 def callee(n, src):
