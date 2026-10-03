@@ -8,3 +8,5 @@ __pycache__/
 research/raw/
 storage-*/
 **/storage-test/
+.pytest_cache/
+research/probes/*.lock

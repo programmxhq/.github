@@ -69,6 +69,12 @@ class Ledger:
             f.write("\n")
         os.replace(tmp, self.path)
 
+    def init(self) -> None:
+        """Create the ledger file (zero usage) if it does not exist yet."""
+        with self._locked():
+            if not self.path.exists():
+                self._write(self._empty())
+
     def snapshot(self) -> dict:
         with self._locked():
             return self._read()

@@ -13,3 +13,4 @@ All times UTC. Agent = who did the work.
 | 2026-10-03 11:50 | orchestrator | census-agent done: API_SPEC_NOTES.md + census tool, 9/9 offline tests pass, all fields spec-verified only. Launched review-agent:census (opus). |
 | 2026-10-03 11:53 | orchestrator | review-agent: teardowns PASS WITH FIXES (45 citations checked, 41 exact, 4 off-by-one fixed; INDEX obs 8 corrected; most UNVERIFIED figures lack source URLs — residual risk). |
 | 2026-10-03 11:54 | orchestrator | template-agent done: builds/_template, npm test 11/11 x3 offline, SDK behaviour checked against apify 3.7.2 / crawlee 3.18.2 source. Launched review-agent:template (opus). |
+| 2026-10-03 11:55 | orchestrator | desk-agent (fable) done: LANDSCAPE, PROGRAMMX_LIVE, PATTERN_HYPOTHESES (14), CANDIDATES (43 scored, top 8), all UNVERIFIED. Launched review-agent:desk (fable). |

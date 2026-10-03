@@ -228,6 +228,7 @@ def write_probes_md(cfg: dict, repo_root: Path = REPO_ROOT) -> Path:
     probes_dir = cfg_path(cfg, "probes_dir", repo_root)
     out = cfg_path(cfg, "probes_md", repo_root)
     ledger = Ledger(cfg_path(cfg, "ledger", repo_root), cfg["budget"]["cap_bytes"])
+    ledger.init()
     snap = ledger.snapshot()
     rows = []
     for sp in sorted(probes_dir.glob("*/summary.json")):
