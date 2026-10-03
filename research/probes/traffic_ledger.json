@@ -1,0 +1,10 @@
+{
+  "cap_bytes": 500000000,
+  "proxy_bytes_total": 0,
+  "direct_bytes_total": 0,
+  "proxy_requests_total": 0,
+  "by_probe": {},
+  "runs": [],
+  "updated": "2026-10-03T11:55:12Z",
+  "note": "Bytes on the wire to/from the Decodo gateway (CONNECT + TLS + HTTP). Never edit by hand to free budget."
+}

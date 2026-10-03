@@ -1,0 +1,13 @@
+# Harness smoke test for the JSON extractor against a public scraping sandbox (not a candidate).
+name: quotes-toscrape-api-smoke
+candidate_ref: "harness smoke test (not a candidate)"
+public_only: true
+url_template: "https://quotes.toscrape.com/api/quotes?page={page}"
+sample_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+headers: {Accept: application/json}
+extract: {type: json, path: quotes}
+rows_per_page_expected: 10
+success: {status: [200], min_rows: 1}
+expected_bytes_per_request: 20000
+requests: 20
+session: sticky

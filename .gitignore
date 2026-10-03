@@ -1,0 +1,12 @@
+.env
+.env.*
+node_modules/
+storage/
+**/storage/
+__pycache__/
+*.pyc
+research/raw/
+storage-*/
+**/storage-test/
+.pytest_cache/
+research/probes/*.lock

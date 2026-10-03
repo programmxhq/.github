@@ -1,0 +1,13 @@
+.idea
+.vscode
+.git
+node_modules
+storage
+storage-test
+apify_storage
+crawlee_storage
+test
+*.md
+!README.md
+.env
+.env.*

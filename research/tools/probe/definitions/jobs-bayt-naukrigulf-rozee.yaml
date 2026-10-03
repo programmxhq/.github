@@ -1,0 +1,95 @@
+# Candidate 5: Bayt + Naukrigulf + Rozee.pk new-job-postings monitor (desk_review.md rank 5).
+#
+# ToS / legal notes (UNVERIFIED, search summaries 2026-10-03):
+#   * robots.txt for bayt.com, naukrigulf.com and rozee.pk did not surface in search. Check by
+#     hand before the run; job boards often disallow /search and parameterised URLs. This probe
+#     uses SEO listing paths (/en/uae/jobs/<q>-jobs/, /jobs-in-<city>, /jobs-in-lahore) where
+#     possible; the Rozee /job/jsearch/ URLs are search-style and are the first to drop if
+#     robots.txt disallows them.
+#     REVIEW 2026-10-03: no robots.txt for any of the three boards surfaced in WebSearch. The 4 Rozee
+#     /job/jsearch/ URLs are site-search result pages (not a search engine, no login) and are the
+#     most likely disallow; Rozee also serves SEO listings at /category/-jobs-in-lahore (seen in
+#     search) which can replace them.
+#   * Job-board T&Cs usually forbid scraping and republishing listings. The actor must output
+#     only new-posting facts + link back, not full descriptions. Legal check before launch.
+#   * Incumbent count is higher than the desk said: search on 2026-10-03 surfaced 8 Bayt actors
+#     (easyapi, parsebird, shahidirfan, codingfrontend, scrapyx, lentic_clockss, haketa,
+#     data_api) and 7 Naukrigulf actors (easyapi, alexist, epicscrapers, memo23, automation-lab,
+#     corvuslab, hgservices). H for this candidate should be re-scored; see PROBE_PLAN.md.
+#   * GEO: no country targeting. Bayt and Naukrigulf serve all regions; Rozee is PK-focused.
+#
+# How rows are counted: `extract` is the ROBUST MARKER, distinct job ids from links:
+#   Bayt        /jobs/<slug>-<digits>/        (confirmed: /en/saudi-arabia/jobs/external-sales-representative-5460283/)
+#   Naukrigulf  ...-jid-<digits>               (UNVERIFIED pattern)
+#   Rozee       ...-jobs-<digits>              (UNVERIFIED pattern)
+# A Bayt listing slug like /jobs/accountant-jobs/ has no digits and is not counted.
+name: jobs-bayt-naukrigulf-rozee
+candidate_ref: "research/reviews/desk_review.md#4 rank 5; research/desk/CANDIDATES.md row 11"
+public_only: true
+notes: >-
+  Monitor polls listing pages (query or city in, newest postings out) and dedupes on job id;
+  detail pages are fetched only for new ids. 30 requests: 10 Bayt, 9 Naukrigulf, 10 Rozee listing
+  pages, 1 Bayt detail page.
+urls:
+  # --- Bayt listing pages (confirmed in search) ---
+  - https://www.bayt.com/en/uae/jobs/accountant-jobs/
+  - https://www.bayt.com/en/uae/jobs/accounting-jobs/
+  - https://www.bayt.com/en/uae/jobs/accountant-jobs-in-abu-dhabi/
+  - https://www.bayt.com/en/uae/jobs/software-companies-jobs-in-dubai/
+  - https://www.bayt.com/en/uae/jobs/technical-accounting-jobs/
+  - https://www.bayt.com/en/uae/jobs/temporary-accountant-jobs/
+  - https://www.bayt.com/en/uae/jobs/                          # UNVERIFIED (all UAE jobs)
+  - https://www.bayt.com/en/saudi-arabia/jobs/                 # UNVERIFIED
+  - https://www.bayt.com/en/uae/jobs/accountant-jobs/?page=2   # UNVERIFIED paging param
+  - https://www.bayt.com/en/uae/jobs/accountant-jobs/          # repeat poll
+  # --- Bayt detail page (confirmed URL; the posting may have expired -> 404/redirect) ---
+  - https://www.bayt.com/en/saudi-arabia/jobs/external-sales-representative-5460283/
+  # --- Naukrigulf listing pages (from incumbent README examples) ---
+  - https://www.naukrigulf.com/jobs-in-dubai
+  - https://www.naukrigulf.com/jobs-in-abu-dhabi
+  - https://www.naukrigulf.com/jobs-in-riyadh
+  - https://www.naukrigulf.com/software-engineer-jobs-in-dubai
+  - https://www.naukrigulf.com/jobs-in-doha                    # UNVERIFIED (city listed in README, URL constructed)
+  - https://www.naukrigulf.com/jobs-in-jeddah                  # UNVERIFIED (constructed)
+  - https://www.naukrigulf.com/jobs-in-muscat                  # UNVERIFIED (constructed)
+  - https://www.naukrigulf.com/jobs-in-dubai-2                 # UNVERIFIED paging pattern
+  - https://www.naukrigulf.com/jobs-in-dubai                   # repeat poll
+  # --- Rozee.pk listing pages (confirmed in search) ---
+  - https://www.rozee.pk/jobs-in-lahore
+  - https://www.rozee.pk/industry/-jobs-in-lahore
+  - https://www.rozee.pk/job/jsearch/q/Lahore/?fpn=0
+  - https://www.rozee.pk/job/jsearch/q/SEO
+  - https://www.rozee.pk/job/jsearch/q/data%20analyst
+  - https://www.rozee.pk/
+  - https://www.rozee.pk/jobs-in-karachi                       # UNVERIFIED (constructed from /jobs-in-lahore)
+  - https://www.rozee.pk/job/jsearch/q/Lahore/?fpn=20          # UNVERIFIED paging offset
+  - https://www.rozee.pk/jobs-in-lahore                        # repeat poll
+  - https://www.rozee.pk/jobs-in-islamabad                     # UNVERIFIED (constructed from /jobs-in-lahore)
+headers:
+  Accept-Language: "en-US,en;q=0.9"
+
+# ROBUST MARKER (used by the harness): distinct job ids from the three link styles above.
+extract:
+  type: regex
+  # REVIEW 2026-10-03: Bayt slug class widened to [A-Za-z0-9%-] so percent-encoded (Arabic) titles
+  # still count. Naukrigulf "-jid-190526000214" and Rozee "-lahore-jobs-1799200" shapes confirmed in search.
+  pattern: '((?:/jobs/[A-Za-z0-9%-]+-|jid-|-jobs-)\d{6,}(?!\d))'
+  distinct: true   # count each distinct group-1 id once (linear; replaces the quadratic dedupe lookahead)
+# NOT read by the harness; switch after the first live response. All UNVERIFIED.
+extract_precise:
+  any_site_jsonld: {type: regex, pattern: '"@type"\s*:\s*"JobPosting"'}   # if listing pages embed JSON-LD
+  bayt: {type: css, selector: "li[data-js-job], [data-job-id]"}
+  naukrigulf: {type: css, selector: "div.ng-box.srp-tuple, [class*=srp-tuple]"}
+  rozee: {type: css, selector: "div.job, [class*=job-listing]"}
+rows_per_page_expected: 20            # UNVERIFIED: Bayt ~20, Naukrigulf ~20-25, Rozee ~20
+
+success:
+  status: [200]
+  min_rows: 1
+  body_not_contains: ["Access Denied", "Pardon Our Interruption", "Attention Required"]
+
+expected_bytes_per_request: 150000    # UNVERIFIED guess: listing HTML 60-150 KB compressed
+max_response_bytes: 2000000
+requests: 30
+session: rotating
+jitter_s: [2.0, 5.0]

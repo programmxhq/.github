@@ -1,0 +1,99 @@
+# Candidate 3: Currys + Screwfix UK price & stock monitor, Argos dropped (desk_review.md rank 3).
+#
+# ToS / legal notes (UNVERIFIED, search summaries 2026-10-03):
+#   * Neither site's robots.txt or T&Cs surfaced in search. Check
+#     https://www.currys.co.uk/robots.txt and https://www.screwfix.com/robots.txt by hand before the
+#     run; drop any URL family they disallow (faceted ?brand= filters are a common disallow).
+#     REVIEW 2026-10-03 (WebSearch summaries, file not read in full): currys.co.uk/robots.txt
+#     disallows search, cart, account registration, wishlist, checkout and the prefn=/pmin=/pmax=
+#     refinement params; none of the Currys URLs below uses those (?start=&sz= not seen either way).
+#     The only "Screwfix" robots.txt that surfaced is shop.screwfix.eu (a different site: it
+#     disallows /search, /policies/). screwfix.com robots.txt is still unseen; the 6 faceted
+#     ?brand=/?powersupply=/?powervoltagesupply= URLs are the first to drop if it disallows them.
+#   * Retail T&Cs commonly forbid automated access; price/stock facts for a monitor are lower risk
+#     than copying descriptions or images. Legal check before launch.
+#   * Anti-bot: Argos (same market) is behind Akamai per an incumbent README; Currys and Screwfix
+#     are unconfirmed. Per desk_review.md: if either shows Akamai/Kasada hard blocks here, drop it.
+#     A block from a TLS-fingerprinting vendor means "not reachable with a plain HTTP client"
+#     (README "Fingerprint gap"), so record the vendor before deciding.
+#   * Currys is Salesforce Commerce Cloud (HTML sitemap title "Sites-curryspcworlduk-Site").
+#     No Currys product-page URL surfaced in search, so no Currys detail pages are probed.
+#
+# How rows are counted: `extract` is the ROBUST MARKER, distinct product ids in links:
+#   Screwfix  /p/<slug>/<code>   (confirmed: /p/makita-dhp484z-.../3738v)
+#   Currys    /products/<slug>-<digits>.html   (UNVERIFIED pattern from desk CANDIDATES.md S7)
+# If Currys tiles carry no such link, every Currys page is `empty`: check `rows_seen` per host
+# in results.jsonl and switch to `extract_precise` (SFCC tiles normally carry data-pid).
+name: uk-retail-currys-screwfix
+candidate_ref: "research/reviews/desk_review.md#4 rank 3; research/desk/CANDIDATES.md row 7 / S7 (minus Argos)"
+public_only: true
+notes: >-
+  Category/listing pages are the monitor's main load (price + stock badge per tile). 30 requests:
+  13 Currys listing pages, 16 Screwfix listing pages, 1 Screwfix product page.
+urls:
+  # --- Currys (confirmed in search) ---
+  - https://www.currys.co.uk/computing/laptops/laptops
+  - https://www.currys.co.uk/computing/laptops
+  - https://www.currys.co.uk/computing/laptops/laptops/samsung
+  - https://www.currys.co.uk/computing/laptops/laptops/samsung/windows-laptops
+  - https://www.currys.co.uk/tv-and-audio/televisions
+  - https://www.currys.co.uk/tv-and-audio/televisions/tvs
+  - https://www.currys.co.uk/tv-and-audio/televisions/tvs/55-64
+  - https://www.currys.co.uk/sale.html
+  - https://www.currys.co.uk/computing
+  - https://www.currys.co.uk/computing/laptops/laptops?start=20&sz=20        # UNVERIFIED (SFCC paging params)
+  - https://www.currys.co.uk/appliances/washing-machines-tumble-dryers/washing-machines   # UNVERIFIED path
+  - https://www.currys.co.uk/computing/laptops/laptops                       # repeat poll
+  - https://www.currys.co.uk/tv-and-audio/televisions/tvs                    # repeat poll
+  # --- Screwfix (confirmed in search) ---
+  - https://www.screwfix.com/c/tools/power-tools/cat830692
+  - https://www.screwfix.com/c/tools/drills/cat830704
+  - https://www.screwfix.com/c/tools/drills/cat830704?powersupply=cordless
+  - https://www.screwfix.com/c/tools/drills/cat830704?brand=dewalt&powersupply=cordless
+  - https://www.screwfix.com/c/tools/drills/cat830704?brand=erbauer
+  - https://www.screwfix.com/c/tools/combi-drills/cat830832
+  - https://www.screwfix.com/c/tools/combi-drills/cat830832?powervoltagesupply=18_v
+  - https://www.screwfix.com/c/tools/drill-drivers/cat830834
+  - https://www.screwfix.com/c/tools/percussion-drills/cat830814?powersupply=cordless
+  - https://www.screwfix.com/c/tools/kits-twinpacks/cat830712?powersupply=cordless
+  - https://www.screwfix.com/c/tools/impact-drivers/cat15320002
+  - https://www.screwfix.com/c/tools/impact-drivers-wrenches/cat830838
+  - https://www.screwfix.com/c/tools/bare-units/cat7230005
+  - https://www.screwfix.com/c/tools/angle-grinders/cat830694?powersupply=electric
+  - https://www.screwfix.com/c/tools/combi-drills/cat830832?page_start=20   # UNVERIFIED paging param
+  - https://www.screwfix.com/c/tools/drills/cat830704                        # repeat poll
+  # --- Screwfix product page (confirmed in search) ---
+  - https://www.screwfix.com/p/makita-dhp484z-18v-li-ion-lxt-brushless-cordless-combi-drill-bare/3738v
+headers:
+  Accept-Language: "en-GB,en;q=0.9"
+
+# ROBUST MARKER (used by the harness): distinct product ids in Screwfix /p/ links or Currys /products/ links.
+extract:
+  type: regex
+  # REVIEW 2026-10-03: Currys slugs contain dots (".../acer-aspire-go-15-15.6-laptop-...-10284802.html",
+  # confirmed in search), so the slug class now allows "." and "%"; the dedupe lookahead now needs a
+  # boundary after \1 so "/p/x/3738" is not swallowed by a later "/p/x/37381".
+  pattern: '(/p/[a-z0-9-]+/[0-9a-z]{4,6}(?=[/"''?#&\\<\s])|/products/[A-Za-z0-9.%-]+-\d{5,}\.html)'
+  distinct: true   # count each distinct group-1 id once (linear; replaces the quadratic dedupe lookahead)
+# NOT read by the harness; switch after the first live response. All UNVERIFIED.
+extract_precise:
+  currys:
+    type: css
+    selector: "[data-pid]"                        # UNVERIFIED (SFCC product tile convention)
+    fields: {title: ".pdp-grid-product-name, h2", price: ".price, [class*=price]"}
+  screwfix:
+    type: css
+    selector: "[data-qaid=product-tile], [data-qaid^=product_tile]"   # UNVERIFIED
+    fields: {title: "a[href*='/p/']", price: "[data-qaid*=price]"}
+rows_per_page_expected: 20            # UNVERIFIED: both sites show ~20 tiles per listing page
+
+success:
+  status: [200]
+  min_rows: 1
+  body_not_contains: ["Access Denied", "Pardon Our Interruption", "Request unsuccessful"]
+
+expected_bytes_per_request: 300000    # UNVERIFIED guess: heavy retail listing HTML 150-350 KB compressed
+max_response_bytes: 3000000
+requests: 30
+session: rotating
+jitter_s: [2.0, 5.0]

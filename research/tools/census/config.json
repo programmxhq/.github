@@ -1,0 +1,15 @@
+{
+  "_comment": "Census defaults. house_owners decides is_apify_owned. Only 'apify' is certain; 'compass' and 'clockworks' are UNCONFIRMED guesses that need live confirmation (see census_summary.json csv.house_owner_check, which counts Actor.isCritical per owner after --enrich).",
+  "house_owners": ["apify", "compass", "clockworks"],
+  "base_url": "https://api.apify.com",
+  "actor_path_prefix": "/v2/actors",
+  "page_size": 1000,
+  "sort_by": "popularity",
+  "include_unrunnable": true,
+  "enrich_min_users": 0,
+  "concurrency": 2,
+  "rps": 2.0,
+  "max_requests": 25000,
+  "spend_cap_usd": 0.5,
+  "spend_check_every": 500
+}

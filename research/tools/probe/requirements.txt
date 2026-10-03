@@ -1,0 +1,8 @@
+# Runtime (Python 3.11+). The HTTP client is stdlib (http.client + ssl MemoryBIO) so
+# that bytes can be counted on the wire *inside* the CONNECT tunnel; see README "Why not requests/httpx".
+PyYAML>=6.0
+selectolax>=0.3.21      # CSS-selector row extraction
+brotli>=1.1             # decode Content-Encoding: br (we still bill the compressed size)
+# Test-only
+pytest>=8
+cryptography>=41        # generates a throwaway self-signed cert for the offline HTTPS fixture server

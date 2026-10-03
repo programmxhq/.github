@@ -1,0 +1,33 @@
+# Run log
+
+All times UTC. Agent = who did the work.
+
+| Time | Agent | Event |
+|---|---|---|
+| 2026-10-03 11:25 | orchestrator | Run started. No `.env` in repo or container; APIFY_TOKEN/DECODO_* env vars unset. |
+| 2026-10-03 11:27 | orchestrator | Network check: api.apify.com, apify.com, console.apify.com, Decodo gateway, general web all denied by egress policy (curl 403 CONNECT, WebFetch EGRESS_BLOCKED). Reachable: github.com, npm, PyPI. WebSearch works (summaries only). |
+| 2026-10-03 11:30 | orchestrator | Full run blocked; reported to user. User chose offline prep: tooling, actor template, GitHub teardowns, UNVERIFIED desk research. |
+| 2026-10-03 11:32 | orchestrator | Cloned apify/apify-docs (sparse) to scratchpad; OpenAPI Store schemas present. |
+| 2026-10-03 11:39 | orchestrator | Launched 5 parallel agents: census-agent (opus), probe-agent (opus), template-agent (opus), teardown-agent (opus), desk-agent (fable). |
+| 2026-10-03 11:49 | orchestrator | teardown-agent done: 6 source-based teardowns (3 current Apify-owned repos, 2 from 2022), 27 closed-source stubs. Launched review-agent (opus) on teardowns. |
+| 2026-10-03 11:50 | orchestrator | census-agent done: API_SPEC_NOTES.md + census tool, 9/9 offline tests pass, all fields spec-verified only. Launched review-agent:census (opus). |
+| 2026-10-03 11:53 | orchestrator | review-agent: teardowns PASS WITH FIXES (45 citations checked, 41 exact, 4 off-by-one fixed; INDEX obs 8 corrected; most UNVERIFIED figures lack source URLs — residual risk). |
+| 2026-10-03 11:54 | orchestrator | template-agent done: builds/_template, npm test 11/11 x3 offline, SDK behaviour checked against apify 3.7.2 / crawlee 3.18.2 source. Launched review-agent:template (opus). |
+| 2026-10-03 11:55 | orchestrator | desk-agent (fable) done: LANDSCAPE, PROGRAMMX_LIVE, PATTERN_HYPOTHESES (14), CANDIDATES (43 scored, top 8), all UNVERIFIED. Launched review-agent:desk (fable). |
+| 2026-10-03 11:56 | orchestrator | probe-agent done: probe harness w/ stdlib wire-level byte counting, 500 MB hard cap, 45/45 tests x3 offline. Decodo prices/gateway UNVERIFIED. Launched review-agent:probe (opus). |
+| 2026-10-03 11:57 | review-agent:census (opus) → orchestrator | Census review PASS WITH FIXES (4 bugs fixed, 13 tests). Orchestrator closed 2 residual risks: fail-closed spend guard, trusted-host token check. 16/16 tests pass. |
+| 2026-10-03 12:05 | review-agent:probe (opus) → orchestrator | Probe review PASS WITH FIXES: 9 bugs fixed (unrecorded bytes on redirect/Ctrl-C, concurrent-run cap race, margin/ledger bypass, 407 verdict, Cloudflare false positives, DECODO_HOST leak). 56/56 tests; orchestrator re-ran suite. |
+| 2026-10-03 12:05 | review-agent:desk (fable) → orchestrator | Desk review PASS WITH FIXES on documents; desk top-8 did NOT survive (Vinted/back-in-stock/Oddschecker refuted, PSX legal gate). Adjusted top 5: UK mortgage-rate monitor, Lulu/Carrefour GCC price monitor, Currys+Screwfix, EPADS/PPRA+Etimad tenders, Bayt/Naukrigulf/Rozee jobs. |
+| 2026-10-03 12:06 | review-agent:template (opus) → orchestrator | Template review PASS WITH FIXES: 6 bugs fixed (2 overcharge/leak highs: charge past exhausted budget, proxy password in error), monitoring state not saved on bad key, swallowed charge failures, id-less records, monitoring key scope. 17/17 x3; orchestrator re-ran suite. Note: some fixes landed in commit 25fbd8b because orchestrator commits with git add -A. |
+| 2026-10-03 12:07 | orchestrator | Wrote research/NEXT_SESSION.md runbook (setup, smoke checks, phase map, guardrails, weak spots). |
+| 2026-10-03 12:17 | probe-def-agent (opus) → orchestrator | 5 probe definitions written (30 URLs each, 40.1 MB projected total, validate exit 0); PROBE_PLAN.md. Launched review-agent:probe-defs (opus). |
+| 2026-10-03 12:27 | review-agent:probe-defs (opus) → orchestrator | Probe-defs review PASS WITH FIXES: 3 markers counted 0 on plausible markup (fixed), Lulu robots header fixed, per-host breakdown added, jobs H 3→2. Orchestrator replaced quadratic dedupe lookaheads with linear `distinct: true` regex option + perf test. 71/71 tests. |
+| 2026-10-03 12:27 | orchestrator | Offline prep complete. All phase outputs reviewed. Totals: census 16 tests, probe 71 tests, template 17 tests. |
+| 2026-10-03 13:38 | orchestrator | User asked for a deeper pass on the top 5 (revenue: our potential + competitors + buyer budget; per-site scraping difficulty; file + PR). Re-checked rates by search (UNVERIFIED): Decodo PAYG $4/GB, plans $3.75–$2.75/GB; Apify 80% share minus compute; CU $0.20/$0.16/$0.13. Launched 5 parallel agents (opus), one per candidate. |
+| 2026-10-03 13:42 | top5:jobs (opus) → orchestrator | Jobs: KILL as scoped. ~23 Bayt / ~14 Naukrigulf / 6 Rozee actors; charge-only-new and cross-site dedupe already sold at $1–1.50/1k. Base ~$80/mo net. |
+| 2026-10-03 13:43 | top5:uk-retail (opus) → orchestrator | Currys+Screwfix: KILL. 6+6 actors (monitor shape taken), Screwfix ToS bans commercial crawling, Currys Cloudflare + UK-only, free Awin feeds. Base ~$102/mo. NOTE: session WebSearch budget (200) reported exhausted — remaining agents may hit it. |
+| 2026-10-03 13:43 | top5:uk-mortgage (opus) → orchestrator | UK mortgage: TEST w/ low ceiling (KILL as Store product unless buyers found). No UK actor; nearest rate scrapers 0–1 MAU. Net ~$2.34/1k. Base ~$70/mo. HSBC ToS bans non-personal use; Halifax closed to new customers 2026-07-01. |
+| 2026-10-03 13:43 | top5:gcc-grocery (opus) → orchestrator | GCC grocery: TEST leaning KILL. Carrefour monitor exists (blackfalcondata, 7 MAU); 9 actors ~16 MAU total; Lulu robots disallows /api/, Carrefour ToS bans robots; free UAE gov price platform. Base ~$170/mo. |
+| 2026-10-03 13:44 | top5:tenders (opus) → orchestrator | Tenders: TEST narrowly (PK first, Etimad add-on). 6 Etimad actors (monitor shape exists, ~0 MAU); PK thin; PPRA OCDS feed planned Dec 2026. Base ~$36/mo. All 5 deep-pass files in. |
+| 2026-10-03 13:49 | top5:synthesis (fable) → orchestrator | TOP5_DEEP_PASS.md written: none of the 5 worth building on current evidence (margin fine, volume not). Rank: tenders TEST, mortgage TEST (info), grocery TEST→KILL, retail KILL, jobs KILL. Recommends census-first selection with explicit filters. Launched review-agent:top5 (opus). |
+| 2026-10-03 13:57 | review-agent:top5 (opus) → orchestrator | Top-5 review PASS WITH FIXES: all verdicts stand; 10 overstatements fixed; jobs per-run fee below per-poll bandwidth (hourly polling = loss), KILL stronger; ToS gate applied unevenly (Carrefour/Lulu/HSBC clauses noted). Stale rows annotated in 4 files. |

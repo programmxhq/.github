@@ -1,0 +1,62 @@
+{
+ "_source": "Shape from apify-docs@7b30f19 paths/actors/acts@{actorId}.yaml example + components/schemas/actors/Actor.yaml + actor-pricing-info/*.yaml",
+ "data": {
+  "id": "aPifyWebScraper01",
+  "userId": "wRsJZtadYvn4mBZmm",
+  "name": "web-scraper",
+  "username": "apify",
+  "description": "desc",
+  "isPublic": true,
+  "actorPermissionLevel": "FULL_PERMISSIONS",
+  "createdAt": "2018-01-01T00:00:00.000Z",
+  "modifiedAt": "2026-09-30T00:00:00.000Z",
+  "stats": {
+   "totalRuns": 90000,
+   "totalUsers": 3000
+  },
+  "versions": [
+   {
+    "versionNumber": "0.1",
+    "envVars": null,
+    "sourceType": "SOURCE_FILES",
+    "applyEnvVarsToBuild": false,
+    "buildTag": "latest",
+    "sourceFiles": []
+   }
+  ],
+  "pricingInfos": [
+   {
+    "apifyMarginPercentage": 0.2,
+    "createdAt": "2018-01-01T00:00:00.000Z",
+    "startedAt": "2018-01-01T00:00:00.000Z",
+    "pricingModel": "FREE"
+   }
+  ],
+  "defaultRunOptions": {
+   "build": "latest",
+   "timeoutSecs": 3600,
+   "memoryMbytes": 2048,
+   "restartOnError": false
+  },
+  "exampleRunInput": {
+   "body": "{ \"helloWorld\": 123 }",
+   "contentType": "application/json; charset=utf-8"
+  },
+  "isDeprecated": false,
+  "deploymentKey": "ssh-rsa AAAA ...",
+  "title": "Web Scraper",
+  "taggedBuilds": {
+   "latest": {
+    "buildId": "z2EryhbfhgSyqj6Hn",
+    "buildNumber": "0.0.2",
+    "finishedAt": "2019-06-10T11:15:49.286Z"
+   }
+  },
+  "notice": "NONE",
+  "categories": [],
+  "isCritical": true,
+  "isGeneric": false,
+  "isSourceCodeHidden": true,
+  "hasNoDataset": false
+ }
+}
