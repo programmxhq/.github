@@ -28,9 +28,9 @@ extension Content {
             .sure("Have a quiet think", Effect(mind: 6, heart: -2, text: "You decide it isn't about the car. You're right, which helps nobody."))]),
 
         .make("harv_empty_nest", 48...60, "🪹", "The Empty Nest",
-              "The last one has left with a van, a houseplant, and your good scissors. The house echoes.",
+              "{kids}: gone, with a van, a houseplant, and your good scissors. The house echoes.",
               cond: Cond(needFlags: ["kids"]), [
-            .sure("Call every single day", Effect(heart: 4, bonds: 6, money: -2, text: "They answer two times in three. The third time you talk to the houseplant.")),
+            .sure("Call every single day", Effect(heart: 4, bonds: 6, money: -2, text: "{kid} answers two times in three. The third time you talk to the houseplant.")),
             .sure("Convert the room", Effect(mind: 4, heart: 6, bonds: -4, money: -6, text: "A studio. A gym. A room with a chair in it. Yours, anyway."))]),
 
         .make("harv_parent", 48...60, "👵", "The Phone Call",
@@ -140,7 +140,7 @@ extension Content {
         .make("harv_late_bloom", 48...60, "💐", "Late Bloom",
               "Someone at the pottery class laughs at your jokes. All of them. Even the pelican one.",
               cond: Cond(noFlags: ["married"]), [
-            .sure("Say the big word", Effect(heart: 10, bonds: 8, money: -8, set: ["married"], text: "A registry office, two witnesses, one lopsided bowl as a gift.")),
+            .sure("Say the big word", Effect(heart: 10, bonds: 8, money: -8, set: ["married"], text: "A registry office, {spouse}, two witnesses, one lopsided bowl as a gift.")),
             .sure("Keep it to Tuesdays", Effect(heart: 5, bonds: 3, text: "Pottery, dinner, home by ten. A good arrangement. Nobody's lonely.")),
             .sure("Panic and switch classes", Effect(mind: 2, heart: -5, text: "Woodwork. Nobody laughs at anything. You miss the pelican."))])
     ]
@@ -161,7 +161,7 @@ extension Content {
             .sure("Sit in the garden", Effect(mind: 3, heart: 8, text: "No calls. Just birds. It turns out that was the point."))]),
 
         .make("dusk_grandkid", 68...95, "🧒", "The Visit",
-              "A small person who shares your nose asks why you are so old.",
+              "A small person with your nose asks why you are so old. {kid} tells them not to be rude, grinning.",
               weight: 4, cond: Cond(needFlags: ["kids"]), [
             .sure("Tell them everything", Effect(mind: 2, heart: 12, bonds: 8, text: "You lie about half of it. They will repeat all of it.")),
             .sure("Give them twenty bucks", Effect(bonds: 3, money: -1, text: "Transactional, but effective. They'll be back.")),
@@ -177,7 +177,7 @@ extension Content {
             .sure("Live downstairs", Effect(body: -4, heart: 3, money: -2, text: "A bed in the front room. You know the postman by his knock."))]),
 
         .make("dusk_widowed", 71...98, "⚰️", "The Empty Chair",
-              "They went first. There's a chair nobody sits in and a mug you can't wash.",
+              "{spouse} went first. There's a chair nobody sits in and a mug you can't wash.",
               weight: 4, cond: Cond(needFlags: ["married"]), [
             .sure("Grieve, properly", Effect(heart: -10, bonds: 6, set: ["lost_love"], clear: ["married"], text: "You cry in supermarkets. People are kinder than you expected.")),
             .sure("Lose yourself in the garden", Effect(body: 4, heart: -6, bonds: -3, set: ["lost_love"], clear: ["married"], text: "The roses have never been better. You talk to them. They don't mind.")),
@@ -208,7 +208,7 @@ extension Content {
               "A name from fifty years ago, in the paper. Not theirs. Their spouse's. You still know the address.",
               cond: Cond(noFlags: ["married"]), [
             .gamble("Write", 60,
-                win: Effect(heart: 12, bonds: 6, set: ["married"], text: "Tea, then dinner, then a quiet wedding with two walking sticks."),
+                win: Effect(heart: 12, bonds: 6, set: ["married"], text: "Tea, then dinner, then a quiet wedding to {spouse}, with two walking sticks."),
                 lose: Effect(mind: 2, heart: -5, text: "A kind reply. 'Too late, I think.' You frame the envelope anyway.")),
             .sure("Leave the past where it is", Effect(mind: 3, heart: 2, text: "Some doors are better as doors. You do the crossword instead."))]),
 
@@ -319,7 +319,7 @@ extension Content {
               "Someone across the hall keeps borrowing sugar. You have, at this point, bought sugar specifically.",
               weight: 4, cond: Cond(noFlags: ["married"], ambition: .hearth), [
             .gamble("Ask them to dinner", 55,
-                win: Effect(heart: 10, bonds: 8, set: ["married"], text: "Dinner became breakfast became a lease became a ring. The sugar was a ruse."),
+                win: Effect(heart: 10, bonds: 8, set: ["married"], text: "Dinner became breakfast became a lease became a ring. {spouse} admits the sugar was a ruse."),
                 lose: Effect(heart: -6, set: ["lost_love"], text: "They were seeing the baker. The baker had better sugar. You move out.")),
             .sure("Just friends, for now", Effect(heart: 2, bonds: 5, text: "Years of sugar and takeaways. Not nothing. Not quite the thing either."))]),
 
@@ -330,10 +330,10 @@ extension Content {
             .sure("Make them take turns", Effect(mind: 2, heart: 2, bonds: 4, text: "A rota. It works, sort of. The cousin keeps the stool."))]),
 
         .make("amb_hearth_more", 28...44, "🧦", "Room for One More",
-              "There's a drawer of tiny socks you bought 'just in case'. The case has arrived.",
+              "There's a drawer of tiny socks {spouse} bought 'just in case'. The case has arrived.",
               weight: 4, cond: Cond(needFlags: ["married"], noFlags: ["kids"], ambition: .hearth), [
-            .sure("The whole adventure", Effect(body: -3, heart: 8, bonds: 8, money: -10, set: ["kids"], text: "A small person who laughs at the dog. The socks fit for a week.")),
-            .sure("Foster", Effect(heart: 6, bonds: 10, money: -6, add: [.kind], set: ["kids"], text: "A nine-year-old with a suitcase and a stare. The stare softens. So do you.")),
+            .sure("The whole adventure", Effect(body: -3, heart: 8, bonds: 8, money: -10, set: ["kids"], text: "{kid} arrives and laughs at the dog. The socks fit for a week.")),
+            .sure("Foster", Effect(heart: 6, bonds: 10, money: -6, add: [.kind], set: ["kids"], text: "{kid}, nine, with a suitcase and a stare. The stare softens. So do you.")),
             .sure("Not us, not now", Effect(heart: -4, bonds: -2, text: "The socks stay in the drawer. You check on them sometimes."))]),
 
         .make("amb_hearth_final", 56...67, "🏡", "The Whole Clan",

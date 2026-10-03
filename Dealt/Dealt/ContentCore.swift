@@ -104,7 +104,17 @@ extension AmbitionDef {
                             blurb: "Outlive your enemies, your rivals, and ideally your warranty.",
                             goalText: "Reach 90 with Heart 50+",
                             wonLine: "Died old, warm, and insufferably smug about it.",
-                            lostLine: "Planned to see ninety. The calendar had other ideas.")
+                            lostLine: "Planned to see ninety. The calendar had other ideas."),
+        .legacy: AmbitionDef(name: "Legacy", emoji: "🌳",
+                             blurb: "Plant a tree, raise a family, leave a sum. Be the reason the house has a doorframe full of heights.",
+                             goalText: "Die with kids, a home and $300k+",
+                             wonLine: "Left a house, a fortune, and an argument about who gets the good chair.",
+                             lostLine: "Wanted to leave something behind. Left mostly instructions."),
+        .thrill: AmbitionDef(name: "Thrill", emoji: "🎢",
+                             blurb: "Safe is for other people. If there's a sign saying no, that's where the view is.",
+                             goalText: "Win 8 gambles in one life",
+                             wonLine: "Beat the odds eight times and never once checked them.",
+                             lostLine: "Lived for the roll. The dice, in the end, had other plans.")
     ]
 }
 

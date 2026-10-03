@@ -93,10 +93,10 @@ extension Content {
               "They laughed at your joke. Not the good one. The one about the pelican.",
               weight: 4, cond: Cond(noTraits: [.cynic], noFlags: ["married"]), [
             .gamble("Propose. Wildly early.", 35,
-                win: Effect(heart: 15, bonds: 12, add: [.romantic], set: ["married"], text: "They said yes. The pelican is in the vows."),
+                win: Effect(heart: 15, bonds: 12, add: [.romantic], set: ["married"], text: "{spouse} said yes. The pelican is in the vows."),
                 lose: Effect(heart: -10, bonds: -6, set: ["lost_love"], text: "They said 'oh no'. The pelican is retired.")),
             .gamble("Take it slow", 70,
-                win: Effect(heart: 8, bonds: 8, set: ["married"], text: "Four years, one shared toothbrush holder, one small wedding. Progress."),
+                win: Effect(heart: 8, bonds: 8, set: ["married"], text: "Four years, one shared toothbrush holder, one small wedding to {spouse}. Progress."),
                 lose: Effect(heart: -4, bonds: 2, text: "Four years, then a very kind conversation. You keep the toothbrush holder.")),
             .sure("Ghost them", Effect(mind: 2, heart: -3, bonds: -2, text: "You stop replying. The pelican joke follows you anyway."))]),
 
@@ -104,38 +104,38 @@ extension Content {
               "Your aunt knows someone. Your aunt always knows someone. This one, she says, has a boat.",
               cond: Cond(noFlags: ["married"]), [
             .gamble("Go to dinner", 55,
-                win: Effect(heart: 10, bonds: 8, set: ["married"], text: "No boat. A kayak. Reader, you married them anyway."),
+                win: Effect(heart: 10, bonds: 8, set: ["married"], text: "No boat. A kayak. Reader, you married {spouse} anyway."),
                 lose: Effect(heart: -4, bonds: 2, text: "Three hours on their lizard. Your aunt is undeterred.")),
             .sure("Decline, politely", Effect(mind: 3, bonds: -3, text: "Your aunt takes it personally. Christmas is quieter."))]),
 
         .make("build_question", 28...44, "💍", "The Question",
               "A ring in your coat pocket, a restaurant with a view. You have rehearsed. The rehearsal did not include the waiter.",
               weight: 4, cond: Cond(needTraits: [.romantic], noFlags: ["married"]), [
-            .sure("Ask, right now", Effect(heart: 12, bonds: 10, money: -6, set: ["married"], text: "Yes. The waiter cries. Dessert is free.")),
+            .sure("Ask, right now", Effect(heart: 12, bonds: 10, money: -6, set: ["married"], text: "{spouse} says yes. The waiter cries. Dessert is free.")),
             .sure("Wait for a better moment", Effect(mind: 2, heart: -4, text: "The better moment never quite arrives. The ring moves coats."))]),
 
         .make("build_nursery", 28...44, "🍼", "The Nursery Question",
-              "The spare room has been 'the spare room' for years. Lately it has started to look like a nursery.",
+              "The spare room has been 'the spare room' for years. Lately {spouse} has started calling it the nursery.",
               weight: 4, cond: Cond(needFlags: ["married"], noFlags: ["kids"]), [
-            .sure("Paint it yellow", Effect(body: -4, heart: 10, bonds: 8, money: -10, set: ["kids"], text: "Sleep is a rumour. The small person has your scowl.")),
+            .sure("Paint it yellow", Effect(body: -4, heart: 10, bonds: 8, money: -10, set: ["kids"], text: "Sleep is a rumour. {kid} has your scowl.")),
             .gamble("Go big", 50,
-                win: Effect(body: -6, heart: 12, bonds: 12, money: -18, set: ["kids"], text: "Three of them. The house is loud and the car is a bus."),
-                lose: Effect(body: -8, heart: 6, bonds: 6, money: -14, set: ["kids"], text: "One, in the end, and a long year. You'd do it again.")),
+                win: Effect(body: -6, heart: 12, bonds: 12, money: -18, set: ["kids"], text: "Enter {kids}. The house is loud and the car is a bus."),
+                lose: Effect(body: -8, heart: 6, bonds: 6, money: -14, set: ["kids"], text: "{kid}, in the end, and a long year. You'd do it again.")),
             .sure("Keep it a spare room", Effect(heart: -4, bonds: -3, text: "A quiet drive home. Nobody says the word 'later'."))]),
 
         .make("build_divorce", 32...47, "💔", "The Quiet Kitchen",
-              "Breakfasts have gone silent. Not angry. Just two people reading the same cereal box for different reasons.",
+              "Breakfasts with {spouse} have gone silent. Not angry. Just two people reading the same cereal box for different reasons.",
               cond: Cond(needFlags: ["married"]), [
             .sure("End it, kindly", Effect(heart: -10, bonds: -6, money: -25, set: ["divorced"], clear: ["married"], text: "Half the plates, all the records. The kitchen is loud again, eventually.")),
             .gamble("Try counselling", 60,
-                win: Effect(heart: 8, bonds: 6, money: -4, text: "A stranger with a notepad fixes it. You both hate how well it worked."),
+                win: Effect(heart: 8, bonds: 6, money: -4, text: "A stranger with a notepad fixes it. You and {spouse} hate how well it worked."),
                 lose: Effect(heart: -6, money: -4, text: "Six sessions. You learn new words for the same silence.")),
             .sure("Stay. Say nothing.", Effect(mind: 2, heart: -8, text: "The cereal box gets read for years. You know it by heart."))]),
 
         .make("build_conference", 32...44, "💋", "The Conference",
-              "Hotel bar, a colleague's laugh, a hand on your arm that stays. Your phone buzzes. It's a photo of the dog.",
+              "Hotel bar, a colleague's laugh, a hand on your arm that stays. Your phone buzzes. It's {spouse}, with a photo of the dog.",
               cond: Cond(needFlags: ["married"]), [
-            .sure("Go to bed. Alone.", Effect(heart: 4, bonds: 4, text: "You call home and describe the keynote at length. Nobody minds.")),
+            .sure("Go to bed. Alone.", Effect(heart: 4, bonds: 4, text: "You call {spouse} and describe the keynote at length. Nobody minds.")),
             .gamble("Stay for one more", 50,
                 win: Effect(heart: 4, bonds: -2, text: "Nothing happened, you say. Nothing happened, you tell yourself. Mostly true."),
                 lose: Effect(heart: -12, bonds: -10, money: -20, add: [.haunted], set: ["divorced"], clear: ["married"], text: "Something happened. Then everything did. The dog stayed with them."))]),
