@@ -11,6 +11,13 @@ counted exactly. TCP/IP header overhead is not counted (providers bill payload t
 One fresh TCP connection per request (Connection: close). That is conservative: production
 scrapers with keep-alive amortise the TLS handshake (~4-7 KB), so real cost per row is at
 or below what we measure.
+
+Early aborts (byte allowance hit, body truncated): the gateway has usually already sent bytes
+we never read. We (1) shrink SO_RCVBUF on proxied sockets to bound data in flight, (2) count
+whatever is already sitting in the kernel receive buffer as billed (`unread_drained_bytes`),
+(3) close with RST so the transfer stops. Bytes still in flight or in the gateway's own
+send buffer cannot be seen from here; the runner keeps `abort_margin_bytes` of headroom
+under the cap to absorb them.
 """
 from __future__ import annotations
 
@@ -20,6 +27,7 @@ import http.client
 import io
 import socket
 import ssl
+import struct
 import time
 import zlib
 from dataclasses import dataclass, field
@@ -211,6 +219,43 @@ class TLSStream(_StreamBase):
         self.raw.close()
 
 
+DEFAULT_PROXY_RCVBUF = 131072
+
+
+def _open_socket(host: str, port: int, timeout: float, rcvbuf: int | None) -> socket.socket:
+    """Like socket.create_connection, but sets SO_RCVBUF *before* connect (window scaling)."""
+    err: Exception | None = None
+    for af, st, proto, _, sa in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+        sock = socket.socket(af, st, proto)
+        try:
+            if rcvbuf:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
+            sock.settimeout(timeout)
+            sock.connect(sa)
+            return sock
+        except socket.timeout as e:
+            sock.close()
+            err = TimeoutError(f"connect timeout to {host}:{port}")
+        except OSError as e:
+            sock.close()
+            err = e
+    raise err or OSError(f"getaddrinfo returned nothing for {host}")
+
+
+def _drain_buffered(sock: socket.socket, cap: int = 8_000_000) -> int:
+    """Count (and discard) bytes already received by the kernel but not read by us."""
+    n = 0
+    try:
+        while n < cap:
+            d = sock.recv(65536, socket.MSG_DONTWAIT)
+            if not d:
+                break
+            n += len(d)
+    except (BlockingIOError, InterruptedError, OSError):
+        pass
+    return n
+
+
 @dataclass
 class FetchResult:
     url: str
@@ -233,6 +278,7 @@ class FetchResult:
     error: str | None = None
     error_kind: str | None = None  # connect|timeout|proxy_auth|proxy_error|tls|byte_limit|protocol|other
     proxy_status: int | None = None
+    unread_drained_bytes: int = 0  # billed bytes counted from the kernel buffer after an early abort
 
     @property
     def wire_total(self) -> int:
@@ -325,6 +371,7 @@ def fetch(
     max_body_bytes: int = 5_000_000,
     byte_limit: int | None = None,
     ca_file: str | None = None,
+    rcvbuf: int | None = DEFAULT_PROXY_RCVBUF,
 ) -> FetchResult:
     """One request on one fresh connection. Never raises; errors land in FetchResult.error."""
     parts = urlsplit(url)
@@ -341,10 +388,7 @@ def fetch(
     try:
         hop_host, hop_port = (upstream.host, upstream.port) if upstream else (
             (proxy.host, proxy.port) if proxy else (host, port))
-        try:
-            sock = socket.create_connection((hop_host, hop_port), timeout=timeout)
-        except socket.timeout as e:
-            raise TimeoutError(f"connect timeout to {'proxy' if (proxy or upstream) else 'target'}") from e
+        sock = _open_socket(hop_host, hop_port, timeout, rcvbuf if (proxy or upstream) else None)
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         plain_via_proxy = proxy is not None and scheme == "http"
         raw = CountingSocket(sock, c, count_app=(scheme == "http"))
@@ -424,6 +468,16 @@ def fetch(
         res.error, res.error_kind = f"{type(e).__name__}: {e}", "other"
     finally:
         if raw is not None:
+            early = res.truncated or res.error_kind in ("byte_limit", "timeout", "protocol", "tls", "other")
+            # Always count stragglers already in the kernel buffer (they were transmitted and billed).
+            drained = _drain_buffered(raw.sock)
+            c.wire_recv += drained
+            res.unread_drained_bytes = drained
+            if early:
+                try:  # RST instead of FIN: tell the gateway to stop sending now
+                    raw.sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+                except OSError:
+                    pass
             raw.close()
         res.wire_sent, res.wire_recv = c.wire_sent, c.wire_recv
         res.app_sent, res.app_recv = c.app_sent, c.app_recv

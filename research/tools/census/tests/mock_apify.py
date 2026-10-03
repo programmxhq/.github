@@ -17,7 +17,8 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 class MockState:
     def __init__(self, fail_first_n_with_429: int = 0, window_cap: int | None = None,
-                 usage_step_usd: float = 0.0, expected_token: str | None = None):
+                 usage_step_usd: float = 0.0, expected_token: str | None = None,
+                 ignore_offset: bool = False):
         store = json.loads((FIXTURES / "store_items.json").read_text())
         self.items = store["items"]
         self.details = {p.stem: json.loads(p.read_text()) for p in (FIXTURES / "actors").glob("*.json")}
@@ -26,6 +27,7 @@ class MockState:
         self.usage = 1.0
         self.usage_step = usage_step_usd
         self.expected_token = expected_token
+        self.ignore_offset = ignore_offset   # misbehaving server: always serves the first page
         self.log: list[dict] = []
         self.lock = threading.Lock()
 
@@ -61,7 +63,7 @@ def make_handler(state: MockState):
 
             if u.path == "/v2/store":
                 limit = int(float(q.get("limit", 1000)))
-                offset = int(float(q.get("offset", 0)))
+                offset = 0 if state.ignore_offset else int(float(q.get("offset", 0)))
                 limit = min(limit, 1000)
                 items = state.items
                 window = items if state.window_cap is None else items[: state.window_cap]

@@ -199,6 +199,56 @@ def test_pricing_parsers_on_spec_shapes():
     assert cols["price_flat_or_per_result"] == 0.002 and cols["price_unit"] == "result"
 
 
+# ---- Added by review-agent:census (2026-10-03) for bugs found in review ----
+
+def test_stalled_paging_stops_before_request_cap():
+    # Server ignores offset and has no usable end: must stop on the 2nd identical page,
+    # not loop until --max-requests (each page is also written to disk).
+    with tempfile.TemporaryDirectory() as d, MockServer(MockState(ignore_offset=True)) as srv:
+        tmp = Path(d)
+        code, out, s = run(srv, tmp, "--no-auth", "--max-requests", "50")
+        assert code == 0, out
+        assert s["requests_by_kind"]["store_list"] == 2
+        assert any("already-seen" in w for w in s["store"]["warnings"])
+
+
+def test_null_top_level_review_fields_fall_back_to_stats():
+    now = census.dt.datetime.now(census.dt.timezone.utc)
+    item = {"id": "x", "username": "u", "name": "n", "actorReviewRating": None, "actorReviewCount": None,
+            "stats": {"actorReviewRating": 4.5, "actorReviewCount": 3, "bookmarkCount": 7}}
+    row = census.build_row(item, None, set(), now)
+    assert row["rating"] == 4.5 and row["review_count"] == 3 and row["bookmark_count"] == 7
+    item["actorReviewRating"] = 0          # a real 0 must not be replaced
+    assert census.build_row(item, None, set(), now)["rating"] == 0
+
+
+def test_pick_current_pricing_tolerates_naive_timestamps():
+    now = census.dt.datetime(2026, 10, 3, tzinfo=census.dt.timezone.utc)
+    infos = [{"pricingModel": "FREE", "startedAt": "2023-01-01T00:00:00"},
+             {"pricingModel": "PAY_PER_EVENT", "startedAt": "2099-01-01T00:00:00.000Z"}]
+    pi, pending = census.pick_current_pricing(infos, now)
+    assert pi["pricingModel"] == "FREE" and pending is True
+
+
+def test_env_fallback_reads_research_env_when_root_env_lacks_token():
+    saved = (census.REPO_ROOT, census.RESEARCH_DIR, dict(census.os.environ))
+    with tempfile.TemporaryDirectory() as d:
+        root, research = Path(d), Path(d) / "research"
+        research.mkdir()
+        (root / ".env").write_text("DECODO_USER=user1\n")
+        (research / ".env").write_text("APIFY_TOKEN=tok_from_research\nDECODO_USER=other\n")
+        try:
+            census.REPO_ROOT, census.RESEARCH_DIR = root, research
+            for k in census.CRED_KEYS:
+                census.os.environ.pop(k, None)
+            creds = census.load_credentials(None)
+        finally:
+            census.REPO_ROOT, census.RESEARCH_DIR = saved[0], saved[1]
+            census.os.environ.clear()
+            census.os.environ.update(saved[2])
+        assert creds["APIFY_TOKEN"] == "tok_from_research" and creds["DECODO_USER"] == "user1"
+
+
 # Property names copied from apify-docs@7b30f19 apify-api/openapi (spec-verified, not live-verified).
 SPEC_STORE_LIST_ACTOR = {  # components/schemas/store/StoreListActor.yaml
     "id", "title", "name", "username", "userFullName", "description", "categories", "notice", "pictureUrl",

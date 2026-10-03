@@ -87,7 +87,10 @@ def test_cost_kill(origin, proxy, creds, cfg, cert):
 
 def test_redirect_followed_and_bytes_summed(origin, proxy, creds, cfg, cert):
     s = run(defn(origin, "/redirect?page=3"), cfg, creds, cert)
-    assert s["ok"] == 20
+    assert s["ok"] == 30  # default n
+    lines = [json.loads(x) for x in (Path(cfg["paths"]["probes_dir"]) / s["name"] / "results.jsonl").read_text().splitlines()]
+    assert all(x["redirects"] == 1 and x["final_url"].endswith("/api/items?page=3") for x in lines)
+    assert len(proxy.conns) == 60  # each hop is its own billed connection
     assert Ledger(cfg["paths"]["ledger"]).used() == proxy.total()
 
 
@@ -107,13 +110,16 @@ def test_per_probe_max_refused(origin, proxy, creds, cfg, cert):
 
 def test_stops_mid_run_at_cap(origin, proxy, creds, cfg, cert):
     cap = 300_000
-    cfg["budget"].update(cap_bytes=cap, min_reserve_bytes=1_000)
+    cfg["budget"].update(cap_bytes=cap, min_reserve_bytes=1_000, abort_margin_bytes=100_000)
     # Underestimate on purpose so the projection passes but real traffic hits the cap.
-    s = run(defn(origin, "/big?kb=80", expected_bytes_per_request=1_000), cfg, creds, cert)
+    d = defn(origin, "/big?kb=80", expected_bytes_per_request=1_000)
+    s = run(d, cfg, creds, cert)
     led = Ledger(cfg["paths"]["ledger"], cap).snapshot()
     assert s["stopped_reason"] == "cap" and s["requests_sent"] < 20
-    assert led["proxy_bytes_total"] <= cap and proxy.total() <= cap
-    assert led["proxy_bytes_total"] == proxy.total()
+    # Hard guarantee: neither our ledger nor the bytes the gateway actually carried pass the cap.
+    assert led["proxy_bytes_total"] <= proxy.total() <= cap
+    assert led["proxy_bytes_total"] == sum(
+        json.loads(x)["bytes_wire_total"] for x in (Path(cfg["paths"]["probes_dir"]) / d.name / "results.jsonl").read_text().splitlines())
     assert led["runs"][-1]["status"] == "cap"
     assert s["verdict"] in ("INCOMPLETE", "KILL")
     # A second run is refused outright: remaining budget can't cover any projection.

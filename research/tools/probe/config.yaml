@@ -13,6 +13,9 @@ budget:
   projection_safety_factor: 1.25
   # Stop a run when less than this remains under the cap.
   min_reserve_bytes: 65536
+  # Headroom kept below the cap (and below per_probe_max_bytes) for bytes the gateway sends
+  # after we abort a request (in flight / in its buffers; invisible to the client).
+  abort_margin_bytes: 1000000
 
 requests:
   default: 30

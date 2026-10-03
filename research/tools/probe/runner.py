@@ -290,7 +290,7 @@ def plan(defn: ProbeDefinition, cfg: dict, n: int | None = None, repo_root: Path
     return {"n": n, "est_bytes_per_request": int(est), "estimate_basis": basis, "projected_bytes": projected,
             "per_probe_max_bytes": b["per_probe_max_bytes"], "ledger_used": used, "cap": ledger.cap,
             "remaining": max(0, ledger.cap - used),
-            "fits": projected <= b["per_probe_max_bytes"] and used + projected <= ledger.cap}
+            "fits": projected <= b["per_probe_max_bytes"] and used + projected + int(b.get("abort_margin_bytes", 0)) <= ledger.cap}
 
 
 def run_probe(
@@ -318,7 +318,7 @@ def run_probe(
     if p["projected_bytes"] > b["per_probe_max_bytes"]:
         raise BudgetRefused(f"projected {p['projected_bytes']:,} B exceeds per-probe max {b['per_probe_max_bytes']:,} B")
     ledger = Ledger(cfg_path(cfg, "ledger", repo_root), b["cap_bytes"])
-    ledger.check_projection(p["projected_bytes"])
+    ledger.check_projection(p["projected_bytes"] + int(b.get("abort_margin_bytes", 0)))
     if dry_run:
         return {"dry_run": True, **p}
     if creds is None:
@@ -360,8 +360,9 @@ def run_probe(
             proxy = proxy_for(creds, session_id, duration if session_id else None)
             run_bytes = 0
             for i in range(n):
-                remaining = ledger.cap - ledger.used()
-                room = min(remaining, b["per_probe_max_bytes"] - run_bytes)
+                margin = int(b.get("abort_margin_bytes", 0))
+                remaining = ledger.cap - ledger.used() - margin
+                room = min(remaining, b["per_probe_max_bytes"] - run_bytes - margin)
                 if room < b["min_reserve_bytes"]:
                     stopped = "cap" if remaining < b["min_reserve_bytes"] else "per_probe_budget"
                     log(f"[stop] {stopped}: only {room:,} B left")
@@ -377,7 +378,7 @@ def run_probe(
                 log(f"[{i + 1}/{n}] {rec['status']} {rec['outcome']} rows={rec['rows']} {nbytes:,} B vendors={vend}"
                     + (f" err={rec['error']}" if rec["error"] else ""))
                 if r.error_kind == "byte_limit":
-                    stopped = "cap" if ledger.remaining() < b["min_reserve_bytes"] else "per_probe_budget"
+                    stopped = "cap" if ledger.remaining() - margin < b["min_reserve_bytes"] else "per_probe_budget"
                     log(f"[stop] byte allowance hit mid-request ({stopped})")
                     break
                 if r.error_kind == "proxy_auth":
@@ -423,7 +424,8 @@ def health_check(cfg: dict, creds: Credentials, *, count: int = 1, sticky: bool 
                  repo_root: Path = REPO_ROOT, log=print) -> list[dict]:
     urls = urls or cfg["health"]["ip_echo_urls"]
     ledger = Ledger(cfg_path(cfg, "ledger", repo_root), cfg["budget"]["cap_bytes"])
-    if ledger.remaining() < cfg["budget"]["min_reserve_bytes"]:
+    hmargin = int(cfg["budget"].get("abort_margin_bytes", 0))
+    if ledger.remaining() - hmargin < cfg["budget"]["min_reserve_bytes"]:
         raise BudgetRefused("Decodo traffic cap reached; health check refused")
     sid = new_session_id() if sticky else None
     proxy = proxy_for(creds, sid, cfg["requests"]["sticky_duration_min"] if sid else None)
@@ -436,7 +438,7 @@ def health_check(cfg: dict, creds: Credentials, *, count: int = 1, sticky: bool 
             for u in urls:
                 r = fetch(u, headers={"Accept": "application/json"}, proxy=proxy, upstream=upstream,
                           timeout=float(cfg["requests"]["timeout_s"]), max_body_bytes=200_000,
-                          byte_limit=ledger.remaining(), ca_file=ca_file)
+                          byte_limit=max(0, ledger.remaining() - hmargin), ca_file=ca_file)
                 ledger.record(run_id, "_health", r.wire_total, proxied=True)
                 info = {"i": i, "endpoint": u, "status": r.status, "latency_ms": round(r.elapsed_ms, 1),
                         "ttfb_ms": round(r.ttfb_ms, 1) if r.ttfb_ms else None, "bytes": r.wire_total,

@@ -49,11 +49,13 @@ def test_http_407(origin_http, proxy):
     assert r.error_kind == "proxy_auth"
 
 
-def test_byte_limit_never_exceeded(origin, proxy, cert):
+def test_byte_limit_abort_counts_buffered_bytes(origin, proxy, cert):
     r = fetch(origin.url("/big?kb=200"), proxy=spec(proxy), timeout=5, ca_file=cert[0], byte_limit=20_000)
     assert r.error_kind == "byte_limit"
-    assert r.wire_total <= 20_000
-    assert proxy.total() <= 20_000  # the proxy never received/sent more than we allowed ourselves
+    assert r.wire_total - r.unread_drained_bytes <= 20_000  # we never *read* past the allowance
+    # what we bill ourselves never exceeds what the gateway actually pushed at us; the gap is
+    # in-flight / sender-buffered data, absorbed by budget.abort_margin_bytes in the runner
+    assert r.wire_total <= proxy.total()
 
 
 def test_timeout(origin_http):
