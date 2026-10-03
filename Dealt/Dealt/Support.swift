@@ -84,6 +84,7 @@ enum Persistence {
 
 // MARK: - Haptics
 
+@MainActor
 enum Haptic {
     static func tap() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()

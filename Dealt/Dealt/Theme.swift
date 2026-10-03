@@ -225,7 +225,7 @@ struct CardFace: View {
             .padding(expanded ? 20 : 10)
             .frame(maxWidth: .infinity)
             .frame(height: fixedHeight)
-            .background { background }
+            .background { cardBackground }
             .overlay { shape.strokeBorder(borderColor, lineWidth: card.priority ? 2 : 1) }
             .shadow(color: Color.black.opacity(0.14), radius: expanded ? 16 : 8, x: 0, y: expanded ? 8 : 4)
             .accessibilityElement(children: .combine)
@@ -283,7 +283,7 @@ struct CardFace: View {
         .foregroundStyle(Color.primary)
     }
 
-    private var background: some View {
+    private var cardBackground: some View {
         ZStack {
             shape.fill(.regularMaterial)
             shape.fill(

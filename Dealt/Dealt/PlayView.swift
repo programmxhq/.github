@@ -225,7 +225,7 @@ struct PlayView: View {
         return HStack(alignment: .top, spacing: 8) {
             ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                 Button {
-                    open(card)
+                    openCard(card)
                 } label: {
                     CardFace(card: card, expanded: false, tint: accent)
                 }
@@ -324,7 +324,7 @@ struct PlayView: View {
 
     // MARK: - Actions
 
-    private func open(_ card: Card) {
+    private func openCard(_ card: Card) {
         guard store.toast == nil else { return }
         withAnimation(.dealtSpring) {
             infoTrait = nil
