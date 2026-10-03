@@ -158,6 +158,33 @@ def test_spend_guard_stops():
         assert "account usage grew" in s["hard_stop"]
 
 
+def test_spend_guard_unavailable_at_start_refuses_authenticated_run():
+    with tempfile.TemporaryDirectory() as d, MockServer(MockState(limits_ok_calls=0)) as srv:
+        tmp = Path(d)
+        code, out, s = run(srv, tmp)
+        assert code == 3, out
+        assert "spend guard unavailable" in s["hard_stop"]
+        assert not any(e["path"].startswith("/v2/store") for e in srv.state.log)
+
+
+def test_spend_guard_fails_closed_when_usage_reads_stop():
+    with tempfile.TemporaryDirectory() as d, MockServer(MockState(limits_ok_calls=1)) as srv:
+        tmp = Path(d)
+        code, out, s = run(srv, tmp, "--enrich", "--spend-check-every", "1")
+        assert code == 3, out
+        assert "fail closed" in s["hard_stop"]
+
+
+def test_token_not_sent_to_untrusted_base_url():
+    with tempfile.TemporaryDirectory() as d, MockServer(MockState()) as srv:
+        tmp = Path(d)
+        url = srv.url.replace("127.0.0.1", "127.0.0.1.nip.io")
+        code, out, _ = run(srv, tmp, "--base-url", url)
+        assert code == 2, out
+        assert "refusing to send APIFY_TOKEN" in out and TOKEN not in out
+        assert srv.state.log == []
+
+
 def test_result_window_cap_warning():
     with tempfile.TemporaryDirectory() as d, MockServer(MockState(window_cap=4)) as srv:
         tmp = Path(d)

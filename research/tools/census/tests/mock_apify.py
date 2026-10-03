@@ -18,7 +18,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 class MockState:
     def __init__(self, fail_first_n_with_429: int = 0, window_cap: int | None = None,
                  usage_step_usd: float = 0.0, expected_token: str | None = None,
-                 ignore_offset: bool = False):
+                 ignore_offset: bool = False, limits_ok_calls: int | None = None):
         store = json.loads((FIXTURES / "store_items.json").read_text())
         self.items = store["items"]
         self.details = {p.stem: json.loads(p.read_text()) for p in (FIXTURES / "actors").glob("*.json")}
@@ -28,6 +28,8 @@ class MockState:
         self.usage_step = usage_step_usd
         self.expected_token = expected_token
         self.ignore_offset = ignore_offset   # misbehaving server: always serves the first page
+        self.limits_ok_calls = limits_ok_calls  # /limits answers this many times, then 500s
+        self.limits_calls = 0
         self.log: list[dict] = []
         self.lock = threading.Lock()
 
@@ -88,6 +90,11 @@ def make_handler(state: MockState):
                 return self._send(200, body)
 
             if u.path == "/v2/users/me/limits":
+                with state.lock:
+                    state.limits_calls += 1
+                    broken = state.limits_ok_calls is not None and state.limits_calls > state.limits_ok_calls
+                if broken:
+                    return self._send(500, {"error": {"type": "internal-error", "message": "usage unavailable"}})
                 with state.lock:
                     cur = state.usage
                     state.usage += state.usage_step

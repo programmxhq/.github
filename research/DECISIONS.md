@@ -10,3 +10,5 @@
 | census-2 | Census uses canonical `/v2/actors/{username}~{name}` (falls back to id on 404), not legacy `/v2/acts/`. | Spec openapi.yaml:134-140 marks `/v2/acts/` deprecated alias. |
 | census-3 | Census sends `includeUnrunnableActors=true`, `sortBy=popularity`, `limit=1000`, `responseFormat` left at `full`. | API default hides unrunnable Actors; `agent` format drops fields; 1000 is spec max. |
 | census-4 | Spend defence: GET-only, hard request cap (25k default), and a usage guard reading `/v2/users/me/limits` `current.monthlyUsageUsd` (stop at +$0.50). First live run must be a 1-page `--no-auth` smoke test. | $5 project cap; whether Store GETs are free is not stated in the spec. |
+| 5 | Census spend guard fails closed: refuses an authenticated run if account usage can't be read at start, and stops after 3 consecutive failed usage reads. Override only with `--allow-unguarded`. | Census review found it failed open; the $5 cap is a hard limit. |
+| 6 | Census sends APIFY_TOKEN only to api.apify.com or localhost unless `--allow-custom-base-url`. | Census review: any `--base-url` would receive the token. |

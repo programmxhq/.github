@@ -95,3 +95,8 @@ The sequence is correct and safe:
 - **Tier fallback for `primary_event_price_usd`.** When there is no FLAT price or FREE tier, it uses the highest tier price. This is documented but is a judgement call.
 - **No retry jitter.** With concurrency 2 this is fine. Raise it only with care.
 - **`house_owners` beyond `apify` is a guess.** Check `house_owner_check` after enrichment.
+
+## Orchestrator follow-up (residual risks closed)
+- Spend guard now fails closed (start + 3 consecutive failed reads). Tests: `test_spend_guard_unavailable_at_start_refuses_authenticated_run`, `test_spend_guard_fails_closed_when_usage_reads_stop`.
+- Token only sent to trusted hosts. Test: `test_token_not_sent_to_untrusted_base_url`.
+- Suite: 16/16 pass.

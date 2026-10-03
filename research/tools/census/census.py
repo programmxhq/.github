@@ -29,6 +29,7 @@ import re
 import sys
 import threading
 import time
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Iterable
@@ -41,6 +42,7 @@ REPO_ROOT = HERE.parents[2]             # repo root
 DEFAULT_CONFIG = HERE / "config.json"
 
 CRED_KEYS = ("APIFY_TOKEN", "DECODO_USER", "DECODO_PASS", "DECODO_HOST")
+TRUSTED_API_HOSTS = {"api.apify.com", "127.0.0.1", "localhost"}  # hosts the token may be sent to
 USER_AGENT = "store-census/0.1 (+research; GET-only)"
 
 CSV_COLUMNS = [
@@ -279,6 +281,8 @@ class SpendGuard:
         self.latest: float | None = None
         self.available = False
         self.last_checked_at_count = 0
+        self.consecutive_failures = 0
+        self.max_consecutive_failures = 3
         self.lock = threading.Lock()
 
     def _read(self) -> float | None:
@@ -314,7 +318,13 @@ class SpendGuard:
             self.last_checked_at_count = count
         val = self._read()
         if val is None:
+            # Fail closed: a guard that cannot see usage is not guarding the $5 cap.
+            self.consecutive_failures += 1
+            if self.consecutive_failures >= self.max_consecutive_failures:
+                raise SpendCapExceeded(f"spend guard could not read account usage {self.consecutive_failures} "
+                                       f"times in a row; stopping (fail closed)")
             return
+        self.consecutive_failures = 0
         self.latest = val
         d = self.delta() or 0.0
         if d > self.cap_usd:
@@ -778,6 +788,10 @@ def parse_args(argv=None):
     ap.add_argument("--raw-dir", type=Path, default=RESEARCH_DIR / "raw")
     ap.add_argument("--out", type=Path, default=RESEARCH_DIR / "census.csv")
     ap.add_argument("--env-file", type=Path, default=None)
+    ap.add_argument("--allow-unguarded", action="store_true",
+                    help="run with a token even if account usage cannot be read (spend guard off)")
+    ap.add_argument("--allow-custom-base-url", action="store_true",
+                    help="send the token to a --base-url other than api.apify.com / localhost")
     ap.add_argument("--backoff-base", type=float, default=0.5)
     ap.add_argument("--max-retries", type=int, default=6)
     args = ap.parse_args(argv)
@@ -793,6 +807,10 @@ def main(argv=None) -> int:
     creds = load_credentials(args.env_file)
     redact = Redactor(creds.values())
     token = None if args.no_auth else creds.get("APIFY_TOKEN")
+    host = (urllib.parse.urlsplit(args.base_url).hostname or "").lower()
+    if token and host not in TRUSTED_API_HOSTS and not args.allow_custom_base_url:
+        log(f"refusing to send APIFY_TOKEN to {host!r}; use --no-auth or --allow-custom-base-url")
+        return 2
     log(f"credentials: APIFY_TOKEN {'present' if creds.get('APIFY_TOKEN') else 'absent'}"
         f"{' (not sent: --no-auth)' if args.no_auth and creds.get('APIFY_TOKEN') else ''}; "
         f"DECODO_* {'present' if all(k in creds for k in CRED_KEYS[1:]) else 'absent'} (unused by census)")
@@ -821,6 +839,9 @@ def main(argv=None) -> int:
     try:
         if not args.build_only:
             guard.start()
+            if client.authenticated and not guard.available and not args.allow_unguarded:
+                raise SpendCapExceeded("spend guard unavailable (cannot read account usage); refusing to run "
+                                       "with a token. Use --no-auth for the free Store list, or --allow-unguarded")
             ckpt = fetch_store(client, guard, store_dir, args)
             if args.enrich:
                 items, _ = load_store_items(store_root)
