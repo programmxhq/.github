@@ -767,6 +767,12 @@ private struct OutcomeSheet: View {
 
     @State private var appeared = false
 
+    init(toast: OutcomeToast, accent: Color, onContinue: @escaping () -> Void) {
+        self.toast = toast
+        self.accent = accent
+        self.onContinue = onContinue
+    }
+
     private let columns: [GridItem] = [
         GridItem(.flexible(), spacing: 8),
         GridItem(.flexible(), spacing: 8),

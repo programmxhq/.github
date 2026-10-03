@@ -464,7 +464,7 @@ struct TombstoneShareCard: View {
                                style: .continuous)
     }
 
-    private var background: LinearGradient {
+    private var backdrop: LinearGradient {
         LinearGradient(colors: [Color(red: 0.20, green: 0.16, blue: 0.45),
                                 Color(red: 0.36, green: 0.20, blue: 0.52),
                                 Color(red: 0.10, green: 0.07, blue: 0.22)],
@@ -473,7 +473,7 @@ struct TombstoneShareCard: View {
 
     var body: some View {
         ZStack {
-            background
+            backdrop
             VStack(spacing: 14) {
                 stone
                 footer
