@@ -432,10 +432,12 @@ struct StartView: View {
             PrimaryButton(title: "Next: choose an ambition", tint: accent) {
                 goToStep(2)
             }
+            .accessibilityIdentifier("start.next")
         } else {
             PrimaryButton(title: "Be born", tint: accent) {
                 beBorn()
             }
+            .accessibilityIdentifier("start.beBorn")
         }
     }
 

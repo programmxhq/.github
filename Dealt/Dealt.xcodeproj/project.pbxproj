@@ -14,11 +14,19 @@
 			remoteGlobalIDString = AA0000000000000000000006;
 			remoteInfo = Dealt;
 		};
+		CC0000000000000000000007 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000009 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000006;
+			remoteInfo = Dealt;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		AA0000000000000000000001 /* Dealt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dealt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB0000000000000000000001 /* DealtTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DealtTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC0000000000000000000001 /* DealtUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DealtUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -30,6 +38,11 @@
 		BB0000000000000000000002 /* DealtTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DealtTests;
+			sourceTree = "<group>";
+		};
+		CC0000000000000000000002 /* DealtUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DealtUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -49,6 +62,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CC0000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -57,6 +77,7 @@
 			children = (
 				AA0000000000000000000002 /* Dealt */,
 				BB0000000000000000000002 /* DealtTests */,
+				CC0000000000000000000002 /* DealtUITests */,
 				AA0000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -66,6 +87,7 @@
 			children = (
 				AA0000000000000000000001 /* Dealt.app */,
 				BB0000000000000000000001 /* DealtTests.xctest */,
+				CC0000000000000000000001 /* DealtUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -118,6 +140,29 @@
 			productReference = BB0000000000000000000001 /* DealtTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		CC0000000000000000000006 /* DealtUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC0000000000000000000009 /* Build configuration list for PBXNativeTarget "DealtUITests" */;
+			buildPhases = (
+				CC0000000000000000000004 /* Sources */,
+				CC0000000000000000000003 /* Frameworks */,
+				CC0000000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CC0000000000000000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CC0000000000000000000002 /* DealtUITests */,
+			);
+			name = DealtUITests;
+			packageProductDependencies = (
+			);
+			productName = DealtUITests;
+			productReference = CC0000000000000000000001 /* DealtUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -132,6 +177,10 @@
 						CreatedOnToolsVersion = 16.0;
 					};
 					BB0000000000000000000006 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = AA0000000000000000000006;
+					};
+					CC0000000000000000000006 = {
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = AA0000000000000000000006;
 					};
@@ -153,6 +202,7 @@
 			targets = (
 				AA0000000000000000000006 /* Dealt */,
 				BB0000000000000000000006 /* DealtTests */,
+				CC0000000000000000000006 /* DealtUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -166,6 +216,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		BB0000000000000000000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC0000000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -189,6 +246,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CC0000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -197,9 +261,48 @@
 			target = AA0000000000000000000006 /* Dealt */;
 			targetProxy = BB0000000000000000000007 /* PBXContainerItemProxy */;
 		};
+		CC0000000000000000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000006 /* Dealt */;
+			targetProxy = CC0000000000000000000007 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		CC000000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.programmx.DealtUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Dealt;
+			};
+			name = Debug;
+		};
+		CC000000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.programmx.DealtUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Dealt;
+			};
+			name = Release;
+		};
 		AA000000000000000000000C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -352,6 +455,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		CC0000000000000000000009 /* Build configuration list for PBXNativeTarget "DealtUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC000000000000000000000A /* Debug */,
+				CC000000000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AA000000000000000000000A /* Build configuration list for PBXProject "Dealt" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

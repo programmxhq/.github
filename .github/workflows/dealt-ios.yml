@@ -2,6 +2,7 @@ name: Dealt iOS
 
 on:
   push:
+    branches: [main]
     paths:
       - "Dealt/**"
       - ".github/workflows/dealt-ios.yml"
@@ -17,8 +18,17 @@ concurrency:
 
 jobs:
   build-and-test:
+    name: Xcode ${{ matrix.xcode }} / iOS ${{ matrix.ios }}
     runs-on: macos-15
-    timeout-minutes: 40
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - xcode: "16"
+            ios: "18"
+          - xcode: "26"
+            ios: "26"
     defaults:
       run:
         working-directory: Dealt
@@ -27,7 +37,7 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_${{ matrix.xcode }}*.app | sort -V | tail -1)"
           xcodebuild -version
 
       - name: Content lint
@@ -38,13 +48,16 @@ jobs:
         run: |
           UDID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
+          major = sys.argv[1]
           d = json.load(sys.stdin)["devices"]
-          ios = sorted((k for k in d if "iOS" in k), key=lambda k: [int(x) for x in k.rsplit("iOS-", 1)[1].split("-")])
+          key = lambda k: [int(x) for x in k.rsplit("iOS-", 1)[1].split("-")]
+          ios = sorted((k for k in d if "iOS-" + major + "-" in k), key=key)
           for rt in reversed(ios):
               for dev in d[rt]:
                   if dev["name"].startswith("iPhone"):
                       print(dev["udid"]); sys.exit()
-          ')
+          sys.exit("no iPhone simulator for iOS " + major)
+          ' "${{ matrix.ios }}")
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
           xcrun simctl list devices available | grep "$UDID"
 
@@ -59,16 +72,36 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             > "$RUNNER_TEMP/xcodebuild.log" 2>&1
           STATUS=$?
-          grep -E "error:|warning: .*/Dealt/|Test .*(passed|failed)|✔|✘|\*\* (BUILD|TEST)" "$RUNNER_TEMP/xcodebuild.log" | sort -u | head -300
+          grep -E "error:|warning: .*/Dealt/|Test .*(passed|failed)|\*\* (BUILD|TEST)" "$RUNNER_TEMP/xcodebuild.log" | sort -u | head -300
           tail -40 "$RUNNER_TEMP/xcodebuild.log"
           exit $STATUS
 
-      - name: Upload logs
+      - name: Export screenshots
+        if: always()
+        run: |
+          OUT="$RUNNER_TEMP/screenshots"
+          mkdir -p "$OUT"
+          [ -d "$RUNNER_TEMP/Dealt.xcresult" ] || exit 0
+          xcrun xcresulttool export attachments --path "$RUNNER_TEMP/Dealt.xcresult" --output-path "$OUT" || exit 0
+          python3 - "$OUT" <<'PY'
+          import json, os, sys
+          out = sys.argv[1]
+          for test in json.load(open(os.path.join(out, "manifest.json"))):
+              for a in test.get("attachments", []):
+                  src = os.path.join(out, a["exportedFileName"])
+                  name = a.get("suggestedHumanReadableName", a["exportedFileName"]).split("_0_")[0]
+                  if os.path.exists(src):
+                      os.rename(src, os.path.join(out, name + os.path.splitext(src)[1]))
+          PY
+          ls "$OUT"
+
+      - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dealt-xcodebuild
+          name: dealt-xcode${{ matrix.xcode }}-ios${{ matrix.ios }}
           path: |
             ${{ runner.temp }}/xcodebuild.log
+            ${{ runner.temp }}/screenshots
             ${{ runner.temp }}/Dealt.xcresult
           if-no-files-found: ignore

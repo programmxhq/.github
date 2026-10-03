@@ -2,7 +2,16 @@ import SwiftUI
 
 @main
 struct DealtApp: App {
-    @State private var store = GameStore()
+    @State private var store: GameStore
+
+    init() {
+        // UI tests launch with -uiTestReset to start from a fresh install.
+        if ProcessInfo.processInfo.arguments.contains("-uiTestReset") {
+            Persistence.wipe()
+            UserDefaults.standard.removeObject(forKey: "dealt.tutorialSeen")
+        }
+        _store = State(initialValue: GameStore())
+    }
 
     var body: some Scene {
         WindowGroup {

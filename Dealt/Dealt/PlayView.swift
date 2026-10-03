@@ -251,6 +251,7 @@ struct PlayView: View {
                 Haptic.tap()
                 withAnimation(.dealtSpring) { store.drift() }
             }
+            .accessibilityIdentifier("resolved.liveOn")
             .padding(.top, 4)
         }
         .padding(20)
@@ -315,6 +316,7 @@ struct PlayView: View {
         }
         .buttonStyle(.plain)
         .disabled(store.toast != nil)
+        .accessibilityIdentifier("drift")
     }
 
     // MARK: - Expanded card
@@ -358,6 +360,7 @@ struct PlayView: View {
         }
         .buttonStyle(PressableStyle())
         .disabled(store.toast != nil)
+        .accessibilityIdentifier("choice." + String(index))
     }
 
     // MARK: - Actions
@@ -423,6 +426,7 @@ private struct DealtCardRow: View {
             CardRow(card: card, tint: accent)
         }
         .buttonStyle(PressableStyle())
+        .accessibilityIdentifier("hand.card." + String(index))
         .offset(y: rowOffset)
         .opacity(rowOpacity)
         .onAppear {
@@ -816,6 +820,7 @@ private struct OutcomeSheet: View {
             PrimaryButton(title: buttonTitle, tint: buttonTint) {
                 onContinue()
             }
+            .accessibilityIdentifier("outcome.continue")
             .padding(.horizontal, 24)
             .padding(.top, 8)
             .padding(.bottom, 12)
@@ -961,6 +966,7 @@ private struct TutorialOverlay: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("tutorial.skip")
     }
 
     private func advance() {

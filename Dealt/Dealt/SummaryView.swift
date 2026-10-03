@@ -218,7 +218,7 @@ struct SummaryView: View {
             if store.heirloomOptions.isEmpty {
                 fallbackHeirloom
             } else {
-                ForEach(store.heirloomOptions, id: \.self) { heirloom in
+                ForEach(Array(store.heirloomOptions.enumerated()), id: \.element) { index, heirloom in
                     Button {
                         pick(heirloom)
                     } label: {
@@ -226,6 +226,7 @@ struct SummaryView: View {
                     }
                     .buttonStyle(PressableStyle())
                     .disabled(picked != nil)
+                    .accessibilityIdentifier("heirloom." + String(index))
                 }
             }
         }
@@ -242,6 +243,7 @@ struct SummaryView: View {
         }
         .buttonStyle(PressableStyle())
         .disabled(picked != nil)
+        .accessibilityIdentifier("heirloom.0")
     }
 
     private func pick(_ heirloom: Heirloom) {
