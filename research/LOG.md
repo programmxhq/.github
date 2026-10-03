@@ -8,3 +8,4 @@ All times UTC. Agent = who did the work.
 | 2026-10-03 11:27 | orchestrator | Network check: api.apify.com, apify.com, console.apify.com, Decodo gateway, general web all denied by egress policy (curl 403 CONNECT, WebFetch EGRESS_BLOCKED). Reachable: github.com, npm, PyPI. WebSearch works (summaries only). |
 | 2026-10-03 11:30 | orchestrator | Full run blocked; reported to user. User chose offline prep: tooling, actor template, GitHub teardowns, UNVERIFIED desk research. |
 | 2026-10-03 11:32 | orchestrator | Cloned apify/apify-docs (sparse) to scratchpad; OpenAPI Store schemas present. |
+| 2026-10-03 11:39 | orchestrator | Launched 5 parallel agents: census-agent (opus), probe-agent (opus), template-agent (opus), teardown-agent (opus), desk-agent (fable). |
