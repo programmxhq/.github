@@ -1,0 +1,10 @@
+{
+	"id": "1",
+	"url": "http://127.0.0.1:36799/item/1",
+	"title": "Alpha",
+	"price": 10,
+	"currency": "USD",
+	"updatedAt": "2026-09-01T00:00:00.000Z",
+	"changeType": "new",
+	"scrapedAt": "2026-10-03T11:49:37.699Z"
+}

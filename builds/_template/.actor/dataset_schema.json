@@ -1,0 +1,41 @@
+{
+    "$schema": "https://apify.com/schemas/v1/dataset.ide.json",
+    "actorSpecification": 1,
+    "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string", "description": "Stable source ID of the item (used for monitoring dedupe).", "example": "12345" },
+            "url": { "type": "string", "description": "Canonical URL of the item.", "example": "https://example.com/item/12345" },
+            "title": { "type": "string", "description": "Item title.", "example": "Example product" },
+            "price": { "type": ["number", "null"], "description": "Price as a number, without currency symbol.", "example": 19.99 },
+            "currency": { "type": ["string", "null"], "description": "ISO 4217 currency code.", "example": "USD" },
+            "updatedAt": { "type": ["string", "null"], "description": "When the source last updated the item (ISO 8601).", "example": "2026-10-01T00:00:00.000Z" },
+            "changeType": { "type": "string", "enum": ["new", "changed", "unmonitored"], "description": "Why the item was saved: 'new' / 'changed' in monitoring modes, 'unmonitored' when monitoring mode is 'all'.", "example": "new" },
+            "scrapedAt": { "type": "string", "description": "When the Actor saved the item (ISO 8601).", "example": "2026-10-03T12:00:00.000Z" }
+        },
+        "required": ["id", "url", "scrapedAt"]
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "description": "BUILDER: list the 5-8 fields a buyer looks at first.",
+            "transformation": {
+                "fields": ["id", "title", "price", "currency", "updatedAt", "changeType", "url", "scrapedAt"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "id": { "label": "ID", "format": "text" },
+                    "title": { "label": "Title", "format": "text" },
+                    "price": { "label": "Price", "format": "number" },
+                    "currency": { "label": "Currency", "format": "text" },
+                    "updatedAt": { "label": "Updated", "format": "date" },
+                    "changeType": { "label": "Change", "format": "text" },
+                    "url": { "label": "URL", "format": "link" },
+                    "scrapedAt": { "label": "Scraped at", "format": "date" }
+                }
+            }
+        }
+    }
+}

@@ -1,2 +1,4 @@
 | 2026-10-03T11:39:34Z | desk-agent (fable) | Desk research started; dirs research/desk and research/logs created |
 | 2026-10-03T11:40:01Z | desk-agent (fable) | Batch 1 searches done (store counts, PPE, plans, top actors, programmx). programmx profile found on Store via WebSearch: 4 public actors (eBay Business Leads, ImmoScout24 Agent Leads, Instantly Lead Pusher, PropertyFinder Deal Scraper) UNVERIFIED |
+| 2026-10-03T11:45:54Z | desk-agent (fable) | ~75 WebSearch queries done across landscape, pricing, patterns and ~45 niche competitor/API checks. Key finding: near-total site-level saturation; monitor-mode actors also exist (Rightmove alerts, OLX PK watchlist, Gazette monitor). Running final empties check |
+| 2026-10-03T11:47:47Z | desk-agent (fable) | Search phase closed (~85 queries). Writing LANDSCAPE, PROGRAMMX_LIVE, PATTERN_HYPOTHESES, CANDIDATES |

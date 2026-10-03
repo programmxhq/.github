@@ -1,0 +1,147 @@
+{
+  "_source": "Shapes from apify-docs@7b30f19 apify-api/openapi: components/schemas/store/StoreListActor.yaml, actors/ActorStats.yaml, store/CurrentPricingInfo.yaml; base values from store/ListOfActorsInStoreResponse.yaml example. pricingPerEvent inner shape (actorChargeEvents) is assumed from actor-pricing-info/PayPerEventActorPricingInfo.yaml because CurrentPricingInfo leaves it untyped.",
+  "items": [
+    {
+      "id": "zdc3Pyhyz3m8vjDeM",
+      "title": "My Public Actor",
+      "name": "my-public-actor",
+      "username": "jane35",
+      "userFullName": "Jane H. Doe",
+      "description": "My public Actor!",
+      "categories": ["MARKETING", "LEAD_GENERATION"],
+      "notice": "NONE",
+      "pictureUrl": "https://...",
+      "userPictureUrl": "https://...",
+      "url": "https://apify.com/jane35/my-public-actor",
+      "stats": {
+        "totalBuilds": 9,
+        "totalRuns": 16,
+        "totalUsers": 6,
+        "totalUsers7Days": 2,
+        "totalUsers30Days": 6,
+        "totalUsers90Days": 6,
+        "totalMetamorphs": 2,
+        "lastRunStartedAt": "2019-07-08T14:01:05.546Z",
+        "actorReviewCount": 69,
+        "actorReviewRating": 4.7,
+        "bookmarkCount": 1269,
+        "publicActorRunStats30Days": {"ABORTED": 2542, "FAILED": 1234, "SUCCEEDED": 732805, "TIMED-OUT": 12556, "TOTAL": 749137}
+      },
+      "currentPricingInfo": {
+        "pricingModel": "PAY_PER_EVENT",
+        "apifyMarginPercentage": 0.2,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "startedAt": "2024-01-15T00:00:00.000Z",
+        "notifiedAboutChangeAt": null,
+        "notifiedAboutFutureChangeAt": null,
+        "isPriceChangeNotificationSuppressed": false,
+        "forceContainsSignificantPriceChange": false,
+        "isPPEPlatformUsagePaidByUser": false,
+        "reasonForChange": null,
+        "trialMinutes": null,
+        "unitName": null,
+        "pricePerUnitUsd": null,
+        "minimalMaxTotalChargeUsd": 0.5,
+        "pricingPerEvent": {
+          "actorChargeEvents": {
+            "actor-start": {"eventTitle": "Actor start", "eventDescription": "Charged once per run", "eventPriceUsd": 0.005, "isOneTimeEvent": true},
+            "result": {"eventTitle": "Result", "eventDescription": "Per scraped item", "isPrimaryEvent": true,
+              "eventTieredPricingUsd": {
+                "FREE": {"tieredEventPriceUsd": 0.004}, "BRONZE": {"tieredEventPriceUsd": 0.0035}, "SILVER": {"tieredEventPriceUsd": 0.003},
+                "GOLD": {"tieredEventPriceUsd": 0.0025}, "PLATINUM": {"tieredEventPriceUsd": 0.002}, "DIAMOND": {"tieredEventPriceUsd": 0.0015}}}
+          }
+        }
+      },
+      "isWhiteListedForAgenticPayments": true,
+      "actorReviewCount": 69,
+      "actorReviewRating": 4.7,
+      "bookmarkCount": 1269,
+      "badge": null,
+      "readmeSummary": "A brief, LLM-generated readme summary"
+    },
+    {
+      "id": "aPifyWebScraper01",
+      "title": "Web Scraper",
+      "name": "web-scraper",
+      "username": "apify",
+      "userFullName": "Apify",
+      "description": "Crawls websites using Chrome and extracts data from pages using JavaScript.",
+      "categories": ["DEVELOPER_TOOLS", "OPEN_SOURCE"],
+      "notice": null,
+      "pictureUrl": "https://...",
+      "userPictureUrl": "https://...",
+      "url": "https://apify.com/apify/web-scraper",
+      "stats": {
+        "totalBuilds": 400,
+        "totalRuns": 90000,
+        "totalUsers": 3000,
+        "totalUsers7Days": 500,
+        "totalUsers30Days": 1200,
+        "totalUsers90Days": 2000,
+        "totalMetamorphs": 0,
+        "lastRunStartedAt": "2026-10-02T10:00:00.000Z"
+      },
+      "currentPricingInfo": {"pricingModel": "FREE"},
+      "isWhiteListedForAgenticPayments": false,
+      "actorReviewCount": 120,
+      "actorReviewRating": 4.4,
+      "bookmarkCount": 900,
+      "badge": null
+    },
+    {
+      "id": "compassMaps000001",
+      "title": "Google Maps Extractor",
+      "name": "google-maps-extractor",
+      "username": "compass",
+      "userFullName": null,
+      "description": "Extract data from hundreds of places fast.",
+      "categories": ["LEAD_GENERATION"],
+      "pictureUrl": null,
+      "userPictureUrl": null,
+      "url": null,
+      "stats": {
+        "totalBuilds": 50,
+        "totalRuns": 500000,
+        "totalUsers": 10000,
+        "totalUsers7Days": 1500,
+        "totalUsers30Days": 4000,
+        "totalUsers90Days": 7000,
+        "lastRunStartedAt": "2026-10-03T09:00:00.000Z",
+        "publicActorRunStats30Days": {"ABORTED": 10, "FAILED": 90, "SUCCEEDED": 900, "TIMED-OUT": 0, "TOTAL": 1000}
+      },
+      "currentPricingInfo": {
+        "pricingModel": "PRICE_PER_DATASET_ITEM",
+        "apifyMarginPercentage": 0.2,
+        "startedAt": "2025-01-01T00:00:00.000Z",
+        "unitName": "place",
+        "pricePerUnitUsd": null,
+        "trialMinutes": null
+      },
+      "actorReviewCount": 300,
+      "actorReviewRating": 4.8,
+      "bookmarkCount": 5000
+    },
+    {
+      "id": "flatMonthly000001",
+      "title": "Rental Actor",
+      "name": "rental-actor",
+      "username": "dev42",
+      "description": "Flat monthly rental",
+      "categories": ["ECOMMERCE"],
+      "url": "https://apify.com/dev42/rental-actor",
+      "stats": {"totalRuns": 0, "totalUsers": 0, "totalUsers7Days": 0, "totalUsers30Days": 0, "totalUsers90Days": 0},
+      "currentPricingInfo": {"pricingModel": "FLAT_PRICE_PER_MONTH", "pricePerUnitUsd": 25, "trialMinutes": 4320, "apifyMarginPercentage": 0.2}
+    },
+    {
+      "id": "goneActor00000001",
+      "title": "Removed Actor",
+      "name": "removed-actor",
+      "username": "gone-user",
+      "description": "Disappears before enrichment",
+      "categories": [],
+      "url": "https://apify.com/gone-user/removed-actor",
+      "stats": {"totalRuns": 10, "totalUsers": 4, "totalUsers7Days": 0, "totalUsers30Days": 1, "totalUsers90Days": 2},
+      "currentPricingInfo": {"pricingModel": "FREE"}
+    }
+  ]
+}

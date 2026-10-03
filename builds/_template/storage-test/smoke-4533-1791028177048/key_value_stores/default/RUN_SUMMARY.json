@@ -1,0 +1,15 @@
+{
+  "received": 6,
+  "skippedOld": 0,
+  "skippedUnchanged": 0,
+  "skippedDuplicate": 0,
+  "saved": 6,
+  "dropped": 0,
+  "failedRequests": 0,
+  "failedUrls": [],
+  "stopReason": null,
+  "chargeLimitReached": false,
+  "monitoringMode": "newOrChanged",
+  "monitoringKey": "seen-b8b5f3928871",
+  "finishedAt": "2026-10-03T11:49:37.821Z"
+}

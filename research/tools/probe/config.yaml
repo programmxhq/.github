@@ -1,0 +1,76 @@
+# Phase 5 probe harness config. Paths are relative to the repo root.
+
+budget:
+  # HARD CAP for the whole project: 500 MB of Decodo traffic. Decimal MB (10^6) is used
+  # because it is the smaller reading of "500 MB" and providers bill decimal GB.
+  # The code also clamps to probe.ledger.HARD_CAP_BYTES, so raising this does nothing.
+  cap_bytes: 500000000
+  # Per-candidate ceiling so one bad probe cannot eat the project budget.
+  per_probe_max_bytes: 25000000
+  # Used to project a run's cost before it starts when the definition gives no estimate
+  # and there is no earlier run of the same probe.
+  default_expected_bytes_per_request: 400000
+  projection_safety_factor: 1.25
+  # Stop a run when less than this remains under the cap.
+  min_reserve_bytes: 65536
+
+requests:
+  default: 30
+  min: 20
+  max: 50
+  timeout_s: 30
+  jitter_s: [1.5, 4.0]          # uniform random sleep between requests
+  max_response_bytes: 5000000   # compressed body bytes; larger bodies are truncated (still billed)
+  max_redirects: 5
+  session: rotating             # rotating | sticky (override per definition or --session)
+  sticky_duration_min: 30       # Decodo sessionduration (1..1440), UNVERIFIED format
+  baseline_requests: 3          # direct (no proxy) baseline when --baseline is given
+
+proxy:
+  # host/port come from DECODO_HOST (may include :port); this is only the fallback port.
+  default_port: 7000            # UNVERIFIED (help.decodo.com residential quick start)
+  # Optional upstream HTTP proxy to chain through (e.g. a container egress proxy), as
+  # "host:port". Empty = connect to the Decodo gateway directly. `--upstream env` uses $HTTPS_PROXY.
+  upstream: ""
+
+health:
+  # UNVERIFIED: Decodo documents ip.decodo.com/json as its IP-check endpoint in curl examples
+  # (curl -U "username:password" -x "gate.decodo.com:7000" "https://ip.decodo.com/json").
+  # Sources: https://help.decodo.com/docs/residential-proxy-quick-start ,
+  #          https://help.decodo.com/docs/datacenter-pay-per-ip-proxy-user-pass-requests
+  ip_echo_urls:
+    - https://ip.decodo.com/json
+    - https://api.ipify.org?format=json
+
+pricing:
+  # ALL PRICES UNVERIFIED. Collected 2026-10-03 from WebSearch result summaries (third-party
+  # reviews quoting decodo.com). Confirm on https://decodo.com/proxies/residential-proxies/pricing
+  # in the live session before trusting any cost figure. `primary` drives verdicts.
+  primary: payg
+  verified: false
+  as_of: "2026-10-03 (search summaries; Oct 2026 live price not confirmed)"
+  usd_per_gb:
+    payg: 4.00          # Pay As You Go, wallet-based, no subscription
+    plan_3gb: 3.75      # $11.25/mo
+    plan_10gb: 3.50     # $35/mo
+    plan_25gb: 3.25     # $81.25/mo
+    plan_100gb: 2.75    # $275/mo
+    ent_250gb: 2.50     # enterprise
+    ent_1tb: 2.00       # enterprise
+  sources:
+    - https://decodo.com/proxies/residential-proxies/pricing
+    - https://decodo.com/proxies/residential-proxies          # "From $2/GB" headline
+    - https://proxidize.com/blog/decodo-pricing/              # tier table (third party)
+    - https://www.xpay.sh/saas-pricing/smartproxy/            # PAYG $4/GB (third party)
+
+verdict:
+  max_block_rate: 0.20          # KILL if (challenge+captcha+block+empty)/sent exceeds this
+  max_cost_per_1k_rows_usd: 0.50
+  max_error_rate: 0.30          # KILL if proxy/network errors exceed this (unmeasurable)
+  min_requests_for_verdict: 20  # fewer completed (e.g. stopped at cap) -> INCOMPLETE
+
+paths:
+  probes_dir: research/probes
+  ledger: research/probes/traffic_ledger.json
+  probes_md: research/probes/PROBES.md
+  log: research/logs/probe-agent.md

@@ -1,0 +1,21 @@
+{
+    "$schema": "https://apify.com/schemas/v1/actor.ide.json",
+    "actorSpecification": 1,
+    "name": "TODO-actor-name",
+    "title": "TODO Actor Title (primary keyword first)",
+    "description": "TODO one-sentence description: what it extracts, from where, in what format.",
+    "version": "0.0",
+    "buildTag": "latest",
+    "meta": {
+        "templateId": "programmx-http-ppe-template",
+        "generatedBy": "Claude Code with Claude Opus 5.5"
+    },
+    "minMemoryMbytes": 256,
+    "maxMemoryMbytes": 1024,
+    "defaultMemoryMbytes": 512,
+    "input": "./input_schema.json",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    },
+    "dockerfile": "../Dockerfile"
+}

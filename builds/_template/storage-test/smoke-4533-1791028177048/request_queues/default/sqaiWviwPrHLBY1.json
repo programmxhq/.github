@@ -1,0 +1,9 @@
+{
+	"id": "sqaiWviwPrHLBY1",
+	"json": "{\"id\":\"sqaiWviwPrHLBY1\",\"url\":\"http://127.0.0.1:36799/item/3\",\"loadedUrl\":\"http://127.0.0.1:36799/item/3\",\"uniqueKey\":\"http://127.0.0.1:36799/item/3\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":1,\"errorMessages\":[\"Error: Request blocked - received 403 status code.\\n    at CheerioCrawler._throwOnBlockedRequest (/home/user/.github/builds/_template/node_modules/@crawlee/basic/internals/basic-crawler.js:954:19)\\n    at CheerioCrawler._runRequestHandler (/home/user/.github/builds/_template/node_modules/@crawlee/http/internals/http-crawler.js:324:22)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async CheerioCrawler._runRequestHandler (/home/user/.github/builds/_template/node_modules/@crawlee/cheerio/internals/cheerio-crawler.js:155:9)\\n    at async wrap (/home/user/.github/builds/_template/node_modules/@apify/timeout/cjs/index.cjs:56:21)\"],\"headers\":{},\"userData\":{\"id\":\"3\",\"label\":\"DETAIL\",\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-10-03T11:49:37.800Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 1,
+	"uniqueKey": "http://127.0.0.1:36799/item/3",
+	"url": "http://127.0.0.1:36799/item/3"
+}

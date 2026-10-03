@@ -1,0 +1,146 @@
+{
+    "$schema": "https://apify.com/schemas/v1/input.ide.json",
+    "title": "TODO Actor input",
+    "description": "TODO: one line telling the user what to enter. Fields under 'Monitoring' make scheduled runs return only new or changed records.",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "startUrls": {
+            "title": "Start URLs",
+            "type": "array",
+            "description": "Listing or search URLs to start from. BUILDER: replace with the source's real entry points, or delete if the Actor is ID-driven only.",
+            "editor": "requestListSources",
+            "prefill": [{ "url": "https://example.com/api/items?page=1" }]
+        },
+        "ids": {
+            "title": "Item IDs",
+            "type": "array",
+            "description": "Fetch these item IDs directly, skipping the listing pages. BUILDER: rename to the source's ID concept (SKU, username, ASIN...).",
+            "editor": "stringList",
+            "prefill": []
+        },
+        "maxItems": {
+            "title": "Max items",
+            "type": "integer",
+            "description": "Stop after this many items are saved. 0 means no limit. You are charged per saved item, so this also caps cost.",
+            "minimum": 0,
+            "default": 100
+        },
+        "monitoringMode": {
+            "sectionCaption": "Monitoring (scheduled runs)",
+            "sectionDescription": "Use with a Schedule to get only what changed since the previous run with the same monitoring key.",
+            "title": "Monitoring mode",
+            "type": "string",
+            "description": "'all' saves every item. 'new' saves only items never seen in earlier runs. 'newOrChanged' also saves items whose content changed. Unchanged items are skipped and not charged.",
+            "editor": "select",
+            "enum": ["all", "new", "newOrChanged"],
+            "enumTitles": ["All items", "Only new items", "New and changed items"],
+            "default": "all"
+        },
+        "monitoringKey": {
+            "title": "Monitoring key",
+            "type": "string",
+            "description": "Name for the memory of seen items. Runs with the same key share it. Leave empty to derive it from the start URLs and IDs.",
+            "editor": "textfield"
+        },
+        "since": {
+            "title": "Only items updated since",
+            "type": "string",
+            "description": "Skip items older than this date (YYYY-MM-DD) or relative period (e.g. '7 days'). Requires the source to expose an update date.",
+            "editor": "datepicker",
+            "dateType": "absoluteOrRelative"
+        },
+        "proxyProvider": {
+            "sectionCaption": "Proxy",
+            "title": "Proxy provider",
+            "type": "string",
+            "description": "'auto' uses Decodo when its credentials are set (environment or fields below), otherwise the proxy configuration field. 'decodo' requires Decodo credentials. 'apify' and 'custom' use the proxy configuration field. 'none' disables proxies.",
+            "editor": "select",
+            "enum": ["auto", "decodo", "apify", "custom", "none"],
+            "enumTitles": ["Auto", "Decodo", "Apify Proxy", "Custom proxy URLs", "No proxy"],
+            "default": "auto"
+        },
+        "proxyConfiguration": {
+            "title": "Proxy configuration",
+            "type": "object",
+            "description": "Used when the provider is 'apify' or 'custom', or as the fallback in 'auto'.",
+            "editor": "proxy",
+            "prefill": { "useApifyProxy": true },
+            "default": { "useApifyProxy": false }
+        },
+        "decodoUsername": {
+            "title": "Decodo username",
+            "type": "string",
+            "description": "Optional. Overrides the DECODO_USER environment variable. Stored encrypted.",
+            "editor": "textfield",
+            "isSecret": true
+        },
+        "decodoPassword": {
+            "title": "Decodo password",
+            "type": "string",
+            "description": "Optional. Overrides the DECODO_PASS environment variable. Stored encrypted.",
+            "editor": "textfield",
+            "isSecret": true
+        },
+        "decodoHost": {
+            "title": "Decodo gateway host:port",
+            "type": "string",
+            "description": "Optional. Overrides the DECODO_HOST environment variable, e.g. gate.example:7000.",
+            "editor": "textfield"
+        },
+        "skipProxyHealthCheck": {
+            "title": "Skip proxy health check",
+            "type": "boolean",
+            "description": "By default the run first requests an IP-echo URL through the proxy and fails fast if the proxy is down.",
+            "default": false
+        },
+        "proxyHealthCheckUrl": {
+            "title": "Proxy health check URL",
+            "type": "string",
+            "description": "IP-echo URL requested through the proxy at startup. Must return the caller IP as JSON (ip/origin/query field) or plain text.",
+            "editor": "textfield",
+            "default": "https://api.ipify.org?format=json"
+        },
+        "maxRequestRetries": {
+            "sectionCaption": "Advanced",
+            "title": "Max request retries",
+            "type": "integer",
+            "description": "Retries per request on errors, 403/429 responses and challenge pages. Each retry uses a fresh proxy session.",
+            "minimum": 0,
+            "maximum": 20,
+            "default": 5
+        },
+        "backoffBaseMillis": {
+            "title": "Retry backoff base",
+            "type": "integer",
+            "description": "First retry waits about this long; each further retry doubles it (with jitter), capped at 30 seconds.",
+            "minimum": 0,
+            "unit": "ms",
+            "default": 1000
+        },
+        "maxConcurrency": {
+            "title": "Max concurrency",
+            "type": "integer",
+            "description": "Maximum parallel requests.",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+        },
+        "requestTimeoutSecs": {
+            "title": "Request timeout",
+            "type": "integer",
+            "description": "Timeout for a single HTTP request.",
+            "minimum": 5,
+            "unit": "seconds",
+            "default": 30
+        },
+        "pushBatchSize": {
+            "title": "Save batch size",
+            "type": "integer",
+            "description": "Items are saved (and charged) in batches of this size. Smaller batches lose less work on a hard abort.",
+            "minimum": 1,
+            "maximum": 500,
+            "default": 20
+        }
+    }
+}

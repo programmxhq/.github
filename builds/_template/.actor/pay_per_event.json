@@ -1,0 +1,13 @@
+{
+    "_NOTE": "DOCUMENTATION ONLY - NOT LIVE. Prices below are PLACEHOLDERS (0). The Apify platform and apify-cli do NOT read this file; official templates (apify/actor-templates ts-mcp-empty README) say to paste the events into Console > Actor > Publication > Monetization. Set real prices there. Remove this _NOTE key before pasting.",
+    "apify-actor-start": {
+        "eventTitle": "Actor start (synthetic, charged automatically by Apify)",
+        "eventDescription": "Charged by the platform once per run per GB of memory (min 1). Never call Actor.charge() for it. Apify docs recommend keeping the default price. NOT LIVE - set in Console.",
+        "eventPriceUsd": 0
+    },
+    "result": {
+        "eventTitle": "Result",
+        "eventDescription": "One item saved to the dataset. Unchanged items skipped by monitoring mode are not charged. PLACEHOLDER PRICE - NOT LIVE - set in Console.",
+        "eventPriceUsd": 0
+    }
+}

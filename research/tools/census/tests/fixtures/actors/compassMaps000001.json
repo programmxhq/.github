@@ -1,0 +1,77 @@
+{
+ "_source": "Shape from apify-docs@7b30f19 paths/actors/acts@{actorId}.yaml example + components/schemas/actors/Actor.yaml + actor-pricing-info/*.yaml",
+ "data": {
+  "id": "compassMaps000001",
+  "userId": "wRsJZtadYvn4mBZmm",
+  "name": "google-maps-extractor",
+  "username": "compass",
+  "description": "desc",
+  "isPublic": true,
+  "actorPermissionLevel": "LIMITED_PERMISSIONS",
+  "createdAt": "2020-05-05T00:00:00.000Z",
+  "modifiedAt": "2026-10-01T12:00:00.000Z",
+  "stats": {
+   "totalRuns": 500000,
+   "totalUsers": 10000
+  },
+  "versions": [
+   {
+    "versionNumber": "0.1",
+    "envVars": null,
+    "sourceType": "SOURCE_FILES",
+    "applyEnvVarsToBuild": false,
+    "buildTag": "latest",
+    "sourceFiles": []
+   }
+  ],
+  "pricingInfos": [
+   {
+    "apifyMarginPercentage": 0.2,
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "startedAt": "2025-01-01T00:00:00.000Z",
+    "pricingModel": "PRICE_PER_DATASET_ITEM",
+    "unitName": "place",
+    "tieredPricing": {
+     "FREE": {
+      "tieredPricePerUnitUsd": 0.004
+     },
+     "BRONZE": {
+      "tieredPricePerUnitUsd": 0.0035
+     },
+     "SILVER": {
+      "tieredPricePerUnitUsd": 0.003
+     },
+     "GOLD": {
+      "tieredPricePerUnitUsd": 0.0025
+     }
+    }
+   }
+  ],
+  "defaultRunOptions": {
+   "build": "latest",
+   "timeoutSecs": 3600,
+   "memoryMbytes": 2048,
+   "restartOnError": false
+  },
+  "exampleRunInput": {
+   "body": "{ \"helloWorld\": 123 }",
+   "contentType": "application/json; charset=utf-8"
+  },
+  "isDeprecated": false,
+  "deploymentKey": "ssh-rsa AAAA ...",
+  "title": "Google Maps Extractor",
+  "taggedBuilds": {
+   "latest": {
+    "buildId": "z2EryhbfhgSyqj6Hn",
+    "buildNumber": "0.0.2",
+    "finishedAt": "2019-06-10T11:15:49.286Z"
+   }
+  },
+  "notice": "NONE",
+  "categories": [],
+  "isCritical": false,
+  "isGeneric": false,
+  "isSourceCodeHidden": true,
+  "hasNoDataset": false
+ }
+}
