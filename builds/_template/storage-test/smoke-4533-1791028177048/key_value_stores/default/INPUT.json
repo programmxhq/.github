@@ -1,1 +1,0 @@
-{"startUrls":[{"url":"http://127.0.0.1:36799/api/items?page=1"}],"monitoringMode":"newOrChanged","proxyHealthCheckUrl":"http://127.0.0.1:36799/ip","backoffBaseMillis":50}

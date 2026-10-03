@@ -1,9 +1,0 @@
-{
-	"id": "p7WVPINtdRs3TGx",
-	"json": "{\"id\":\"p7WVPINtdRs3TGx\",\"url\":\"http://127.0.0.1:36799/item/5\",\"loadedUrl\":\"http://127.0.0.1:36799/item/5\",\"uniqueKey\":\"http://127.0.0.1:36799/item/5\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":1,\"errorMessages\":[\"Error: Detected a session error, rotating session... \\nBlocked: captcha element\\n    at CheerioCrawler.requestHandler (file:///home/user/.github/builds/_template/src/main.js:82:31)\\n    at /home/user/.github/builds/_template/node_modules/@crawlee/http/internals/http-crawler.js:356:87\\n    at wrap (/home/user/.github/builds/_template/node_modules/@apify/timeout/cjs/index.cjs:56:27)\\n    at /home/user/.github/builds/_template/node_modules/@apify/timeout/cjs/index.cjs:83:7\\n    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14)\\n    at /home/user/.github/builds/_template/node_modules/@apify/timeout/cjs/index.cjs:82:13\\n    at new Promise (<anonymous>)\\n    at addTimeoutToPromise (/home/user/.github/builds/_template/node_modules/@apify/timeout/cjs/index.cjs:63:10)\\n    at CheerioCrawler._runRequestHandler (/home/user/.github/builds/_template/node_modules/@crawlee/http/internals/http-crawler.js:356:53)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\"],\"headers\":{},\"userData\":{\"id\":\"5\",\"label\":\"DETAIL\",\"__crawlee\":{\"state\":4,\"sessionRotationCount\":1}},\"handledAt\":\"2026-10-03T11:49:37.806Z\"}",
-	"method": "GET",
-	"orderNo": null,
-	"retryCount": 1,
-	"uniqueKey": "http://127.0.0.1:36799/item/5",
-	"url": "http://127.0.0.1:36799/item/5"
-}

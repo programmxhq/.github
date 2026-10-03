@@ -1,0 +1,17 @@
+# Harness smoke test against a public scraping sandbox (not an Apify candidate).
+# Run this first in the live session to confirm bytes/row maths on a known page (~20 rows/page).
+name: books-toscrape-smoke
+candidate_ref: "harness smoke test (not a candidate)"
+public_only: true
+notes: "books.toscrape.com is a public practice site built for scraping tutorials."
+url_template: "https://books.toscrape.com/catalogue/page-{page}.html"
+sample_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+extract:
+  type: css
+  selector: article.product_pod
+  fields: {title: "h3 a", price: ".price_color"}
+rows_per_page_expected: 20
+success: {status: [200], min_rows: 10}
+expected_bytes_per_request: 60000
+requests: 20
+session: rotating

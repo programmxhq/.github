@@ -1,9 +1,0 @@
-{
-	"id": "jSOXqSyPNIwoZRG",
-	"json": "{\"id\":\"jSOXqSyPNIwoZRG\",\"url\":\"http://127.0.0.1:36799/item/2\",\"loadedUrl\":\"http://127.0.0.1:36799/item/2\",\"uniqueKey\":\"http://127.0.0.1:36799/item/2\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"id\":\"2\",\"label\":\"DETAIL\",\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-10-03T11:49:37.692Z\"}",
-	"method": "GET",
-	"orderNo": null,
-	"retryCount": 0,
-	"uniqueKey": "http://127.0.0.1:36799/item/2",
-	"url": "http://127.0.0.1:36799/item/2"
-}

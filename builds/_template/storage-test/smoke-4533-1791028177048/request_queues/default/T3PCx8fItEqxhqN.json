@@ -1,9 +1,0 @@
-{
-	"id": "T3PCx8fItEqxhqN",
-	"json": "{\"id\":\"T3PCx8fItEqxhqN\",\"url\":\"http://127.0.0.1:36799/api/items?page=1\",\"loadedUrl\":\"http://127.0.0.1:36799/api/items?page=1\",\"uniqueKey\":\"http://127.0.0.1:36799/api/items?page=1\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"label\":\"LIST\",\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-10-03T11:49:37.659Z\"}",
-	"method": "GET",
-	"orderNo": null,
-	"retryCount": 0,
-	"uniqueKey": "http://127.0.0.1:36799/api/items?page=1",
-	"url": "http://127.0.0.1:36799/api/items?page=1"
-}

@@ -6,3 +6,5 @@ storage/
 __pycache__/
 *.pyc
 research/raw/
+storage-*/
+**/storage-test/

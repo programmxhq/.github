@@ -1,0 +1,41 @@
+# Copy to <candidate>.yaml. Every field except name/public_only/urls(or url_template)/extract is optional.
+name: example-candidate            # slug; output goes to research/probes/<name>/
+candidate_ref: "research/candidates/...#row"   # where this candidate came from (free text)
+public_only: true                  # REQUIRED. Public pages only, no logins, no cookies/auth headers.
+notes: "What the actor would scrape and why this URL is representative."
+
+method: GET                        # GET | POST | HEAD
+# Either an explicit list...
+urls:
+  - https://example.com/search?q=widgets&page=1
+# ...or a template expanded over sample_ids (scalars fill the single {field}, dicts fill by key).
+# url_template: "https://example.com/api/items?category={cat}&page={page}"
+# sample_ids:
+#   - {cat: tools, page: 1}
+#   - {cat: tools, page: 2}
+headers:                           # merged over a desktop-Chrome default set (User-Agent, Accept, Accept-Language)
+  Accept: application/json
+# body: {query: "widgets"}         # dict/list -> JSON with Content-Type: application/json
+
+extract:                           # how rows are counted on a successful response
+  type: json                       # json | json_in_html | css | regex
+  path: data.items                 # json/json_in_html: dotted path; list -> len(list) rows
+  # selector: "article.product"    # css / json_in_html (e.g. script#__NEXT_DATA__)
+  # fields: {title: "h2", price: ".price"}   # css only: sample 2 rows into results for sanity
+  # pattern: '"sku":"[^"]+"'       # regex: number of matches
+rows_per_page_expected: 24
+
+success:                           # predicate for an "ok" response
+  status: [200]
+  min_rows: 1
+  # body_contains: ["\"items\""]
+  # body_not_contains: ["captcha"]
+
+expected_bytes_per_request: 150000 # for the pre-run budget projection (else config default 400 KB)
+requests: 30                       # clamped to 20..50
+session: rotating                  # rotating | sticky
+# sticky_duration_min: 30
+# jitter_s: [1.5, 4.0]
+# timeout_s: 30
+# max_response_bytes: 5000000
+# follow_redirects: true
