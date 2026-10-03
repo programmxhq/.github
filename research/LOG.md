@@ -11,3 +11,4 @@ All times UTC. Agent = who did the work.
 | 2026-10-03 11:39 | orchestrator | Launched 5 parallel agents: census-agent (opus), probe-agent (opus), template-agent (opus), teardown-agent (opus), desk-agent (fable). |
 | 2026-10-03 11:49 | orchestrator | teardown-agent done: 6 source-based teardowns (3 current Apify-owned repos, 2 from 2022), 27 closed-source stubs. Launched review-agent (opus) on teardowns. |
 | 2026-10-03 11:50 | orchestrator | census-agent done: API_SPEC_NOTES.md + census tool, 9/9 offline tests pass, all fields spec-verified only. Launched review-agent:census (opus). |
+| 2026-10-03 11:53 | orchestrator | review-agent: teardowns PASS WITH FIXES (45 citations checked, 41 exact, 4 off-by-one fixed; INDEX obs 8 corrected; most UNVERIFIED figures lack source URLs — residual risk). |

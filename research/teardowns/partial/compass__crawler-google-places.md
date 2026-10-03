@@ -3,10 +3,10 @@
 **Read this first.** The current Store actor is not public on GitHub (probe of apify/ and owner repo names failed; see INDEX). What exists publicly is a set of forks of an older open-source repo `drobnikj/crawler-google-places`. This teardown uses the newest fork found:
 
 - **Source:** github.com/josiahakinloye/store-crawler-google-places @ `7fa8405` (last commit 2022-11-11). Prefix `GM` = that repo@`7fa8405`:.
-- Upstream identity: `package.json` repository/homepage = `github.com/drobnikj/crawler-google-places`, author "Jakub Drobnik" (`GM package.json:13,20,25`). README links its cost tab at `apify.com/drobnikj/crawler-google-places` (`GM README.md:72`). So the Store actor appears to have been published under `drobnikj` before `compass` — **source-derived for 2022; current ownership UNVERIFIED**.
+- Upstream identity: `package.json` repository/homepage = `github.com/drobnikj/crawler-google-places`, author "Jakub Drobnik" (`GM package.json:13,20,25`). README links its cost tab at `apify.com/drobnikj/crawler-google-places` (`GM README.md:71`). So the Store actor appears to have been published under `drobnikj` before `compass` — **source-derived for 2022; current ownership UNVERIFIED**.
 - Last CHANGELOG entry 2022-11-10 (`GM CHANGELOG.md:1-3`). Everything below describes the **2022 code**, not today's build. Fork may contain fork-owner changes: **UNVERIFIED**.
 - **Owner class:** disputed. WebSearch summaries say "developed by Compass and maintained by Apify" (tryapify.com / apify.com pages, UNVERIFIED) while use-apify.com calls compass a "community maintainer" (UNVERIFIED).
-- **Claimed users (UNVERIFIED):** 596K users, 4.70★ (use-apify.com "Top 25 Most Popular Apify Actors", stated as read from Store API 2026-09-09); another summary says "over 237,000 users" (undated).
+- **Claimed users (UNVERIFIED):** 596K users, 4.70★ (use-apify.com "Top 25 Most Popular Apify Actors", https://use-apify.com/docs/best-apify-actors/most-popular-actors, stated as read from Store API 2026-09-09); another summary says "over 237,000 users" (undated).
 
 ## Input schema (2022) — `GM INPUT_SCHEMA.json`
 Required: `proxyConfig` only. 35 fields, including:
@@ -33,7 +33,7 @@ Browser: `Apify.PuppeteerCrawler` (SDK v2, `GM src/places_crawler.js:111`; `apif
 
 ## Enumeration (2022)
 - Search page → intercept Google's internal XHR responses (`/search`, `/maps/preview/place`) and parse JSON rather than DOM (`GM src/enqueue_places.js:39-47, 263-265`).
-- Scroll the results panel with mouse wheel, 2–3 s jittered waits "to simulate real scrolling" (`enqueue_places.js:339-421`); cap 120 places per search page (`GM src/consts.js:4`).
+- Scroll the results panel with mouse wheel, 2–3 s jittered waits "to simulate real scrolling" (`enqueue_places.js:339-422`); cap 120 places per search page (`GM src/consts.js:4`).
 - Geographic splitting: geocode area via OpenStreetMap Nominatim (polygon GeoJSON) (`GM src/utils/polygon.js:96-106`), then build a point grid over the polygon bounding box sized by zoom-level metres-per-pixel (`polygon.js:120-125, 157-200`) and run one search per grid point. Places outside the polygon filtered (`polygon.js:48-50`).
 
 ## Charging

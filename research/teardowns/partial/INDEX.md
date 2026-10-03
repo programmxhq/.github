@@ -7,7 +7,7 @@ Teardown agent (opus), 2026-10-03. Offline-prep mode: apify.com and api.apify.co
 - Clones (shallow) are in the session scratchpad under `teardowns/`. They are not committed.
 
 ## Candidate list: about 30 most-used Store actors (UNVERIFIED)
-The main anchor is use-apify.com "Top 25 Most Popular Apify Actors (2026)", which says its figures were read from the Store API on 2026-09-09. Only its top 5 appeared in the summaries; the remaining rows come from per-actor searches. Treat the order as rough.
+The main anchor is use-apify.com "Top 25 Most Popular Apify Actors (2026)" (https://use-apify.com/docs/best-apify-actors/most-popular-actors), which says its figures were read from the Store API on 2026-09-09. Only its top 5 appeared in the summaries; the remaining rows come from per-actor searches. Treat the order as rough. Rows come from different sources and dates: e.g. row 5 (RAG Web Browser, 184K) comes from a summary of https://apify.com/apify/rag-web-browser, not from the use-apify.com top 5 (whose #5 is Google Search at 179K), so the two figures are not comparable. Most per-row figures still lack a source URL (review 2026-10-03).
 
 | # | Actor | Claimed total users (UNVERIFIED) | Owner class (UNVERIFIED) | Public source? | File |
 |---|---|---|---|---|---|
@@ -50,7 +50,7 @@ The main anchor is use-apify.com "Top 25 Most Popular Apify Actors (2026)", whic
 - use-apify.com calls them "community maintainers" that "out-rank apify-official Actors".
 - One summary calls Compass and Clockworks independent developers.
 
-This needs live data: the owner's `username` and profile in the Store API. Source-derived hint: in 2022 the Google Maps README linked `apify.com/drobnikj/crawler-google-places` (`josiahakinloye/store-crawler-google-places@7fa8405:README.md:72`). So the actor was published under a different username before `compass`.
+This needs live data: the owner's `username` and profile in the Store API. Source-derived hint: in 2022 the Google Maps README linked `apify.com/drobnikj/crawler-google-places` (`josiahakinloye/store-crawler-google-places@7fa8405:README.md:71`). So the actor was published under a different username before `compass`.
 
 ## Teardown matrix (actors with source)
 
@@ -76,12 +76,12 @@ GitHub probes that failed, meaning the repo is private or does not exist (`git l
 
 ## Cross-cutting observations
 
-**Source-derived.** These are limited to 7 codebases. 5 are Apify house and current; 2 are 2022 snapshots.
+**Source-derived.** These are limited to 8 actors from 4 repos (the 7 matrix rows): 6 current Apify house actors from 2 repos (`apify/actor-scraper`, `apify/actor-rag-web-browser`) and 2 actors from 2022 snapshots.
 1. **Every top actor whose source we found is either an Apify house actor or a 2022 snapshot.** No public source was found for any current independent top-30 actor. The commercial leaders in maps, social and LinkedIn are closed.
 2. **Browser vs HTTP.** In the current house code, the generic scrapers offer both. The newest product, RAG Web Browser, defaults to **raw HTTP** (`scrapingTool` default `raw-http`) and uses Playwright only on request. The two 2022 vertical scrapers (Maps, YouTube) were browser-only (Puppeteer).
 3. **API interception beats DOM.** The 2022 Maps code parsed Google's internal XHR JSON while scrolling. The 2022 Airbnb code called Airbnb's JSON API directly through BasicCrawler. Both read structured responses instead of scraping HTML.
 4. **Anti-bot is mostly Crawlee primitives**: session pool, cookie persistence, retiring a session on captcha or bad status, resource blocking and fingerprints. None of the code we found solves captchas; on a captcha it retires the session and retries. The only stealth-browser code is the Camoufox scraper.
-5. **Proxy choice is pushed to the user.** Only RAG Web Browser hard-codes a group (`GOOGLE_SERP`, which accepts only GOOGLE_SERP or SHADER). The Maps code explicitly *forbids* GOOGLE_SERP. No code hard-codes RESIDENTIAL; it shows up only as a hint string in the YouTube proxy helper.
+5. **Proxy choice is pushed to the user.** Only RAG Web Browser hard-codes a group (`GOOGLE_SERP`, which accepts only GOOGLE_SERP or SHADER). The Maps code explicitly *forbids* GOOGLE_SERP. No code hard-codes RESIDENTIAL; it shows up only as a hint string in the YouTube proxy helper (and the identical helper in the out-of-list Google Trends repo).
 6. **Enumeration by geography.** The Maps actor got around Google's cap of about 120 results per search by geocoding the area (Nominatim polygon) and running one search per grid point, with grid spacing derived from the zoom level.
 7. **Charging granularity (one data point).** RAG Web Browser charges PPE per *unit of value*: one event per successful query and one per fetched page. Its design rules:
    - charge only after results exist;
@@ -90,7 +90,7 @@ GitHub probes that failed, meaning the repo is private or does not exist (`git l
    - leave `apify-actor-start` to the platform.
 
    Its sibling `url-to-markdown` prices browser and HTTP fetches differently. The generic scrapers and the 2022 actors have no charge code (usage-based).
-8. **Input conventions.** Every scraper input schema requires `proxyConfiguration`/`proxyConfig` with default `{useApifyProxy: true}`. Limits default to 0 (no limit) in the generic scrapers. The Maps code defaults to the more privacy-preserving option for reviewer names (`scrapeReviewerName` false).
+8. **Input conventions.** Every scraper input schema has `proxyConfiguration`/`proxyConfig` with default `{useApifyProxy: true}`, and all except RAG Web Browser make it required (RAG requires only `query`). Limits default to 0 (no limit) in the generic scrapers. The Maps code defaults to the more privacy-preserving option for reviewer names (`scrapeReviewerName` false).
 
 **UNVERIFIED (from search summaries).**
 - Lead categories by claimed users: Google Maps, Instagram (6 of the candidate rows are apify/instagram-* actors), TikTok, LinkedIn and Facebook.

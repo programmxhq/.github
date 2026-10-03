@@ -7,7 +7,7 @@
 - **Claimed users (UNVERIFIED, WebSearch summary, 2026-10-03):** 125K total users.
 
 ## Input schema (`AS actor-scraper/web-scraper/INPUT_SCHEMA.json`)
-Required: `startUrls`, `pageFunction`, `proxyConfiguration`. 40 fields. Key ones:
+Required: `startUrls`, `pageFunction`, `proxyConfiguration`. 39 fields. Key ones:
 
 | Field | Line | Type | Default | Prefill |
 |---|---|---|---|---|

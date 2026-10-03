@@ -2,7 +2,7 @@
 
 - **Source:** github.com/apify/actor-rag-web-browser @ `b2dd455` (commit date 2026-10-02). Prefix `RAG` = `apify/actor-rag-web-browser@b2dd455:`.
 - **Owner class:** house. Repo also builds a second actor, `apify/url-to-markdown` (`RAG src/mini-actors.ts:64-78`).
-- **Claimed users (UNVERIFIED, WebSearch summary 2026-10-03):** 184K total users.
+- **Claimed users (UNVERIFIED, WebSearch summary 2026-10-03 of https://apify.com/apify/rag-web-browser):** 184K total users (same summary: 32K monthly, 276 bookmarks).
 
 ## Input schema (`RAG actors/apify_rag-web-browser/.actor/input_schema.json`)
 Required: `query`.

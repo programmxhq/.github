@@ -2,7 +2,7 @@
 
 - **Source code:** not found on GitHub (see INDEX for probes). All facts below come from WebSearch summaries on 2026-10-03 and are **UNVERIFIED**.
 - **Owner class:** house
-- **Claimed users:** 179K users, 4.65★ (use-apify.com, 2026-09-09)
+- **Claimed users:** 179K users, 4.65★ (use-apify.com, https://use-apify.com/docs/best-apify-actors/most-popular-actors, 2026-09-09)
 - **Other notes:** No public repo found (probed apify/google-search-scraper, apify/actor-google-search-scraper).
 
 ## Fields to fill once live

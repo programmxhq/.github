@@ -5,7 +5,7 @@
 - **Claimed users (UNVERIFIED, WebSearch summary 2026-10-03):** 13K users, 5.0 stars.
 
 ## Input schema (`AS actor-scraper/cheerio-scraper/INPUT_SCHEMA.json`)
-Required `startUrls`, `pageFunction`, `proxyConfiguration`. 29 fields; same crawl controls as Web Scraper minus browser options, plus HTTP-specific ones:
+Required `startUrls`, `pageFunction`, `proxyConfiguration`. 30 fields; same crawl controls as Web Scraper minus browser options, plus HTTP-specific ones:
 - `additionalMimeTypes` (L114, default []), `suggestResponseEncoding` (L122), `forceResponseEncoding` (L128, false), `ignoreSslErrors` (L134, false).
 - `proxyRotation` (L84, default RECOMMENDED), `maxRequestRetries` (L156, 3), `maxConcurrency` (L187, 50), `pageLoadTimeoutSecs` (L194, 60).
 
