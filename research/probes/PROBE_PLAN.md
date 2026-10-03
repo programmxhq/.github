@@ -17,6 +17,8 @@ and `python -m probe plan` accepts them (projected total 40.1 MB of the 500 MB c
 | 5 | Bayt + Naukrigulf + Rozee jobs | `jobs-bayt-naukrigulf-rozee.yaml` | 30 / 30 | 150 KB | 5.63 MB |
 | | **Total, one pass each** | | 150 requests | | **40.1 MB** |
 
+REVIEW 2026-10-03 (top-5 deep pass): drop jobs and retail (optionally keep 3-5 Currys requests as a geo-block control); the run order becomes tenders, mortgage, grocery, about 23 MB in total. See desk/TOP5_DEEP_PASS.md §6.
+
 The B/req estimates are guesses. Two safeguards limit the cost if they are wrong. The harness
 stops any single run at `per_probe_max_bytes` (25 MB). Each response is also capped at
 `max_response_bytes` (2-3 MB). The worst case for one full pass of all five is therefore
@@ -78,6 +80,8 @@ leaves roughly 400 MB of headroom.
 
 ## 1. UK lender mortgage-rate monitor (`uk-mortgage-lender-rates`)
 
+REVIEW 2026-10-03 (top-5 deep pass): the 5 Halifax URLs may now redirect (brand closed to new customers 2026-07-01, moving to Lloyds); add "Halifax redirect" to the adjust list and consider the Nationwide intermediary PDF as a counted source.
+
 **What is tested.** Whether direct-lender rate tables can be fetched with a plain HTTP client
 through residential IPs, and whether they are server-rendered. The probe covers 8 lenders:
 HSBC, NatWest, Halifax, Lloyds, Barclays, Santander, Coventry BS and Nationwide. It requests
@@ -127,6 +131,8 @@ Note: KILL on cost is very unlikely here.
 
 ## 2. Lulu + Carrefour GCC grocery price monitor (`gcc-grocery-lulu-carrefour`)
 
+REVIEW 2026-10-03 (top-5 deep pass): `gcc.luluhypermarket.com/robots.txt` has now been seen via search (supersedes the "unseen" note above): it disallows `/api/`, `/search/`, `/promo/` and sort/filter/price params, so check the probe's pagination params against it. Carrefour UAE ToS bans robots/spiders; add it to the legal paragraph. "Carrefour likely uses a MAF API" is unsupported.
+
 **What is tested.** Whether category pages on `gcc.luluhypermarket.com/en-ae` and
 `carrefouruae.com/mafuae/en` return product tiles to a plain HTTP client from non-UAE
 residential IPs, and at what bytes per product. The probe covers:
@@ -172,6 +178,8 @@ $0.05/1k.
 
 ## 3. Currys + Screwfix price & stock monitor (`uk-retail-currys-screwfix`)
 
+REVIEW 2026-10-03 (top-5 deep pass): KILL pre-probe (Screwfix T&Cs forbid crawling; Currys UK geo-lock and Cloudflare ASN bans; 12 incumbents incl. a price tracker). Run at most 3-5 Currys requests as a geo-block control.
+
 **What is tested.** Anti-bot posture and bytes per product on listing pages. The probe uses
 13 Currys listing pages and 16 Screwfix listing pages (including faceted `?brand=` and
 `?powersupply=` filters), plus 1 Screwfix product page. No Currys product URL surfaced in
@@ -206,6 +214,8 @@ carry lower risk than descriptions or images.
    separately; it would cut bytes/row by about 10x.
 
 ## 4. EPADS/PPRA + Etimad new-tender monitor (`tenders-pk-epads-sa-etimad`)
+
+REVIEW 2026-10-03 (top-5 deep pass): add a no-proxy baseline to confirm the reported datacenter block; one source says PageSize is "typically 100" (this plan assumes a 50 max; the def sends 24) and PublishDateId defaults to 5.
 
 **What is tested.**
 
@@ -251,6 +261,8 @@ not probed.
    `error`.
 
 ## 5. Bayt + Naukrigulf + Rozee new-postings monitor (`jobs-bayt-naukrigulf-rozee`)
+
+REVIEW 2026-10-03 (top-5 deep pass): KILL pre-probe. Incumbent READMEs confirm the Rozee detail id pattern `...-<city>-jobs-<7 digits>` and Cloudflare on Bayt.
 
 **What is tested.** Anti-bot and bytes per job on listing pages for 3 boards: 10 Bayt
 (SEO listing paths plus 1 detail page), 9 Naukrigulf (`/jobs-in-<city>`) and 10 Rozee

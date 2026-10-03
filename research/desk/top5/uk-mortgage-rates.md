@@ -90,6 +90,8 @@ No UK-mortgage-specific Store actor was found in 4 queries. Adjacent actors (see
 
 The PDF and JSON sources cost about 5x less in bandwidth. Cost is never the constraint.
 
+REVIEW (review-agent:top5, 2026-10-03): arithmetic checks ($2.40 - $0.047 - $0.014 = $2.34; scenarios $11.70 / $70 / $936; months ~9 / ~2 / <1; diff-mode $2.16 + $0.60). Two caveats. 12 KB/row is 0.012 GB in decimal units ($0.048 PAYG); the file used 0.0117 (binary), a $0.001 difference. The 0.07 CU/1k figure matches the HTTP rate in the diff-mode paragraph (100 requests = 0.1 CU), not a Playwright worst case; a browser at 5-10x that costs $0.07-0.14/1k and leaves net about $2.20-2.27. Verdict unaffected.
+
 **Diff-mode cost to check.** One daily run over about 1,500 products is about 100 requests, 18 MB and 0.1 CU. Over 30 runs that comes to $2.16 Decodo (PAYG) + $0.60 compute per subscriber per month. That is why `lender-checked` exists: 8 lenders × 30 runs × $0.02 = $4.80 gross, about $3.84 at 80%.
 
 **Scenarios** (net $2.34/1k rows):
@@ -113,6 +115,8 @@ The cheap probe is already defined (6.75 MB), so run it. Do not build beyond the
 3. **Cost and difficulty are fine.** Net is about $2.34 per 1k rows, and an HTTP/PDF MVP is about 40 h. The build is not the problem.
 
 **Biggest risk:** distribution and legal combined. HSBC's terms forbid non-personal use without written permission. A commercial resale feed of bank content sits in a grey zone, and the realistic buyer (fintech) will ask about licensing.
+
+REVIEW (review-agent:top5, 2026-10-03): by the gate desk_review applied to Oddschecker (ToS forbids commercial use), HSBC's "personal information" clause gates the HSBC leg; leave HSBC out of any commercial build without written permission.
 
 **The live probe must confirm:**
 

@@ -33,10 +33,10 @@ Answer the UNVERIFIED items on the first live calls, then update `API_SPEC_NOTES
 | 1 Census | `tools/census/` (reviewed, fail-closed $ guard, request cap) | Run steps 1–2 of the census README. Enrich actors with `--enrich-min-users 10` first. |
 | 2 Top 20 | `teardowns/partial/` (6 from code, 27 stubs + field checklist) | Rank by `users_30d`. Fill stubs from actor pages, issues tabs and READMEs, one subagent per actor. |
 | 3 Patterns | `desk/PATTERN_HYPOTHESES.md` (14 hypotheses, each with census columns and kill thresholds) | Test the hypotheses against `census.csv` (H10, H2, H8 first) and verify all prices live. |
-| 4 Candidates | `desk/CANDIDATES.md` (43 scored) + `reviews/desk_review.md` (adjusted top 5, legal gate) | Re-score with census counts of competitors per niche. Add the legal/ToS gate (`T`) column. |
-| 5 Probes | `tools/probe/` (reviewed, 500 MB hard cap) + `probes/PROBE_PLAN.md` + definitions for the top 5 | `validate` → `plan` → `run --baseline`, then fix selectors after the first response. |
+| 4 Candidates | `desk/CANDIDATES.md` (43 scored) + `reviews/desk_review.md` (adjusted top 5, legal gate) | Re-score with census counts of competitors per niche. Add the legal/ToS gate (`T`) column. REVIEW 2026-10-03 (top-5 deep pass): replace "re-score with census counts" with the census-first peer-set selection in desk/TOP5_DEEP_PASS.md §5 (demand floor, unhealthy incumbent, shape gap, price floor), including the `T` gate column. |
+| 5 Probes | `tools/probe/` (reviewed, 500 MB hard cap) + `probes/PROBE_PLAN.md` + definitions for the top 5 | `validate` → `plan` → `run --baseline`, then fix selectors after the first response. REVIEW 2026-10-03 (top-5 deep pass): "definitions for the top 5" becomes 3 probes (tenders, mortgage, grocery; ~23 MB) plus an optional Currys geo control. |
 | 6 Report | — | Write `FINAL_REPORT.md` from the census, teardowns and probe numbers (Fable). |
-| 7 Build | `builds/_template/` (reviewed: pay-per-event, Decodo + health check, retries, monitoring, 17 tests) | Copy it to `builds/<name>` for 2–3 easy survivors (edit `src/routes.js`), then a tester agent runs 3 clean live runs. |
+| 7 Build | `builds/_template/` (reviewed: pay-per-event, Decodo + health check, retries, monitoring, 17 tests) | Copy it to `builds/<name>` for 2–3 easy survivors (edit `src/routes.js`), then a tester agent runs 3 clean live runs. REVIEW 2026-10-03 (top-5 deep pass): "2-3 easy survivors" is optimistic; expect 0-1 from this shortlist, with candidates coming from the census pass instead. |
 
 ## 3. Budget guardrails already in code
 
@@ -49,3 +49,4 @@ Answer the UNVERIFIED items on the first live calls, then update `API_SPEC_NOTES
 - Most UNVERIFIED figures in `teardowns/partial/` and the "Official API status" column in `desk/CANDIDATES.md` lack source URLs. The live census supersedes the user counts.
 - Desk research under-counted incumbent actors that already monitor new listings in classifieds and e-commerce niches. Re-count from `census.csv` before trusting any "thin niche" claim.
 - The probe client sends plain Python HTTP/1.1 traffic, not a browser fingerprint, so it may under-report reachability on strict Akamai, Kasada or DataDome sites. Record that as a limitation rather than retrying with a browser.
+- REVIEW 2026-10-03 (top-5 deep pass): ToS/robots gates (Screwfix, Carrefour, Lulu, HSBC) and geo-locks (Currys, Etimad) were found in the deep pass; check both before any probe.

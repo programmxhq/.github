@@ -158,6 +158,8 @@ $1.50 matches get_anything and sits above the $1.00 floor. That gap is hard to j
 
 **Hidden cost: polling bandwidth.** Hourly polling of 10 Bayt queries × 3 pages × 150 KB is about 3.2 GB a month, or about $13 per user per month at $4/GB. That is why the `run-start` charge is needed. Daily polling costs about $0.54 per user per month.
 
+REVIEW (review-agent:top5, 2026-10-03): arithmetic error. One poll (10 queries x 3 pages x 150 KB = 4.5 MB) costs $0.018 of Decodo at $4/GB, but `run-start` at $0.005 returns $0.004 after the 80% share, so each poll loses about $0.014. Hourly polling (720 polls) loses about $10.08 per user per month; daily polling about $0.42. Break-even `run-start` at 4.5 MB/poll is about $0.0225 (use $0.025). The scenarios below omit this cost: with daily polling they become about $7.7 / $76 / $587 per month; with hourly polling about -$21 / -$21 / +$298. KILL stands and is strengthened.
+
 **Scenarios.** All use a blended net of about $1.00 per 1k, after a ramp of about 3 months to reach the stated users.
 
 | Scenario | Users (steady MAU) | Rows / user / month | Rows / month | Net / month | Months to first $100 (incl. ramp) |
@@ -169,6 +171,9 @@ $1.50 matches get_anything and sits above the $1.00 floor. That gap is hard to j
 Assumptions behind the scenarios:
 
 - **Base** puts us about level with the 2nd-ranked Bayt actor's MAU (blackfalcondata, 32). That would need 6+ months against 20+ incumbents.
+
+REVIEW (review-agent:top5, 2026-10-03): inconsistent with the table. Base is 10 users, about one-third of blackfalcondata/bayt-scraper's 32 MAU; 10 users is level with shahidirfan Naukrigulf (10 MAU) or abotapi Bayt (8). Matching 32 MAU at 8k rows would be about $256/month before polling cost.
+
 - **Optimistic** means overtaking blackfalcondata. That is unlikely.
 - **Conservative** is what most of the long tail shows: 0-8 MAU.
 

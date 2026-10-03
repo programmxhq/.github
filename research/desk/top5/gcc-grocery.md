@@ -102,7 +102,11 @@ The whole GCC-grocery niche on Apify has **~16 MAU** and plausibly **$150–600/
 
 Example, base scenario: 360k checks × $0.50 = $180, plus 18k changes × $3 = $54, gives $234. Then 0.8 × 234 = $187, minus $17.6 Decodo and $0.7 compute, gives about $170.
 
+REVIEW (review-agent:top5, 2026-10-03): Decodo in this example is about $16.9 (360 x $0.047/1k; $17.3 at decimal 12 MB x $4/GB), not $17.6. Net is $169-170, so $170 stands. Other rows recompute within $3: conservative $28.2 ($21.4 browser), optimistic $1,058-1,060 ($801-810). The 80% is applied to gross and Decodo/compute are subtracted after it, as they should be.
+
 The optimistic scenario is roughly the entire current niche (~16 MAU), so treat it as a ceiling. Add 3–8 weeks of build before the first payer.
+
+REVIEW (review-agent:top5, 2026-10-03): only by user count. Section C sizes the niche at 5k-20k rows per MAU and $150-600/month gross; these scenarios assume 30k-150k checks per user. Base gross ($234) is already 39-156% of the whole niche and optimistic gross ($1,463) is 2.4-10x it. Read base as a stretch and optimistic as above the ceiling.
 
 ## F. Verdict: **TEST** (leaning KILL on market size)
 
@@ -116,6 +120,8 @@ The optimistic scenario is roughly the entire current niche (~16 MAU), so treat 
 - The Carrefour monitor shape is already taken (blackfalcondata, $2/1k, 7 MAU).
 - The free MOET platform covers essentials.
 - Both retailers' ToS limit use to personal, non-commercial purposes, and Carrefour explicitly bans robots.
+
+REVIEW (review-agent:top5, 2026-10-03): by the standard the retail file and desk_review applied (Screwfix crawl ban, Oddschecker commercial-use ban treated as gates), Carrefour's explicit robots/spiders ban and Lulu's personal, non-commercial clause are gates too. TEST holds only as an information probe; a build needs a licence or written consent first.
 
 **The live probe must confirm:**
 1. Both hosts return product tiles to plain HTTP from **non-GCC** residential IPs, with no geo-redirect to a store picker (check `final_url`).

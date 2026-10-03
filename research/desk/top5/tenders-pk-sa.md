@@ -152,6 +152,8 @@ Compute assumption:
 
 Net = rows × $6.40/1k − compute ($0.25 × users) − Decodo ($0.20/1k, mid case).
 
+REVIEW (review-agent:top5, 2026-10-03): recomputed $4.46 / $35.70 / $305.00 per month; net/1k $6.09-6.28 list-only and $5.80-6.09 with details. The 80% share is applied to revenue and costs are subtracted after it. The ramp shape is not stated: with a linear 1/3, 2/3, full ramp, base reaches $100 in month 4 (file: about 5), conservative in about 24 and PayPal $20 in month 6 (both match). Compute is per user-month, so a 400-row conservative user nets an effective $5.58/1k, not $6.10.
+
 ## F. Verdict: **TEST**, with a narrow scope. This is the weakest of the top-5 economically.
 
 **3 strongest reasons:**
@@ -160,6 +162,9 @@ Net = rows × $6.40/1k − compute ($0.25 × users) − Decodo ($0.20/1k, mid ca
 2. **Lowest legal/ToS risk in the shortlist, and a PK leg that is still thin.** EPADS became mandatory for federal
    procurement on 28 Sep 2026, which concentrates the federal flow onto one portal. The PK incumbent is a
    single-publisher actor with odd pricing.
+
+REVIEW (review-agent:top5, 2026-10-03): this rests on the nature of government notices, not on a read: Etimad terms and every host's robots.txt were not searched (budget; see the not-found list at the end). Treat "lowest legal risk" as a prior until a human reads them.
+
 3. **Real off-platform willingness to pay.** Buyers pay $8–18/month in PK, $31–334/month in KSA and $333–499/month
    for tender APIs. An EN-translated, PK+SA monitor has a story that ProgrammX can sell directly as well.
 

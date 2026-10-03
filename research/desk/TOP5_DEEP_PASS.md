@@ -4,9 +4,13 @@ Author: top5:synthesis (fable), 2026-10-03 (UTC). Inputs: the five deep passes i
 
 **Everything here is UNVERIFIED.** Every figure comes from WebSearch summaries obtained 2026-10-03 and copied from the five files; no page was fetched live and nothing was re-searched (the session's search budget was exhausted). Where a cell says "not searched", the agent hit the 200-search cap before reaching it; that is different from "searched, none found".
 
+REVIEW (review-agent:top5, 2026-10-03): the 200-search cap hit four agents, not five. The jobs agent logged 22 searches and finished at 13:42:25Z without reporting the cap (`logs/top5-agents.md`); its "not searched" cells (Indeed/LinkedIn status, Revelio) were scope choices. Mortgage, retail and jobs also carry plain "not found" cells that do not say whether the search ran.
+
 ## 1. Bottom line
 
 None of the five is worth building as a Store product on today's evidence. Two are dead (Currys/Screwfix, GCC/PK jobs): the niche is crowded, the monitor shape is already sold, and each has a ToS or geo gate. Three are "TEST" only because the build is cheap and the probe is cheaper, not because demand showed up: UK mortgage (the whole mortgage-rate niche on Apify, US included, earns about $0-30/month), GCC grocery (about 16 MAU across 9 actors, Carrefour monitor already taken, both retailers' ToS forbid commercial use) and PK/SA tenders (6 Etimad actors with 0-6 users each, two of them monitors). The pattern is consistent: where Apify demand exists, 10-23 actors already serve it; where the niche is thin, nobody is buying. Margin was never the problem (net $0.35-6.28 per 1k rows in every case); volume is.
+
+REVIEW (review-agent:top5, 2026-10-03): the net range is $0.24-6.28 per 1k (grocery browser path $0.24; see the table). Margin is a problem in one case: the jobs `run-start` fee ($0.005, $0.004 net) does not cover polling bandwidth (4.5 MB per poll = $0.018), so hourly polling loses about $10 per user per month and turns the jobs base case to about -$21/month (daily polling: about $76). Bottom line unchanged.
 
 Next step: run the three cheap probes (tenders, mortgage, grocery; about 23 MB) as calibration for the harness and as geo tests, not as build decisions. Then change the selection method for the live session: start from `census.csv` demand signals and look for unhealthy incumbents, instead of inventing niches and searching for competitors.
 
@@ -27,6 +31,8 @@ Next step: run the three cheap probes (tenders, mortgage, grocery; about 23 MB) 
 | Hardest site + grade | Lloyds/Halifax HARD; MSM HARD | Carrefour MEDIUM-HARD; Talabat HARD | Currys HARD | Etimad MEDIUM; Punjab MEDIUM | Bayt MEDIUM-HARD |
 | Legal / ToS blocker | HSBC terms: personal use only; Moneyfacts sells the data; UK database right | Lulu: personal non-commercial only, robots blocks `/api/`; Carrefour: **explicitly bans robots** | **Screwfix forbids "crawl" and commercial exploitation**; Currys ToS not found | Lowest; public notices; Etimad terms not read | Not found for any board; job T&Cs usually forbid republishing |
 | Geo risk (no country targeting) | UK banks suspicious of non-UK IPs; not measured | Store-picker redirect from non-GCC IPs; not measured | **Currys UK-only, VPN-hostile, Cloudflare ASN bans** | Etimad blocks datacenter IPs; non-Saudi residential unknown; PK portals 5xx/406 to cloud | None reported |
+
+REVIEW (review-agent:top5, 2026-10-03): (1) Jobs monthly net $9 / $80 / $600 omits polling cost; with daily polling about $8 / $76 / $587, with hourly about -$21 / -$21 / +$298 (`top5/jobs-gcc-pk.md` §E REVIEW). (2) Grocery base and optimistic exceed the niche gross the same file estimates ($150-600): base gross $234, optimistic $1,463. (3) Tenders "8" mixes units: 6 Etimad actors plus 2 PK publishers (blessed_jouster has 3 Epad actors); GulfPulse (GCC, partly monitor-shaped) is not counted. (4) If the Screwfix crawl ban gates retail, Carrefour's robots ban and the Lulu and HSBC personal-use clauses gate grocery and mortgage the same way; their TEST is information-only, as §1 and §6 already say.
 
 ## 3. Scraping sources and difficulty
 
@@ -109,11 +115,15 @@ Assumptions shared by all five: revenue = MAU × rows/month × list price; our s
 | Tenders | $4.5 / $36 / $305 at $8/1k, net ~$6.1-6.3/1k; conservative = 2 users × 400 rows | All Etimad actors $20-100 combined; PK <$20 | **~$20-120** | PK aggregators $8-18/mo (PKR 3,000/mo); TendersAlerts KSA $31-77/mo; GlobalTenders $137-334/mo; BidDetail/TendersOnTime $21-208/mo; tender API $333-499/mo |
 | Jobs | $9 / $80 / $600 at blended net $1.00/1k; base = matching the #2 Bayt actor's 32 MAU | blackfalcondata NG $250-2,500; shahidirfan Bayt $150-1,500; epicscrapers NG $100-1,000; Rozee actors $90-900 combined; long tail <$50 each | **~$0.6k-6k across the named leaders** (sum of the file's ranges; rows/MAU is the unknown) | TheirStack $49-1,500/mo; Coresignal $49-5,000/mo; JobsPikr $79-480/mo; PredictLeads from $40/mo; Lightcast ~$5-12k/yr (2022 quote, GCC coverage not found) |
 
+REVIEW (review-agent:top5, 2026-10-03): "base = matching the #2 Bayt actor's 32 MAU" copies an inconsistency in the source: the base scenario is 10 users, one-third of blackfalcondata Bayt's 32 MAU; matching 32 MAU would be about $256/month before polling cost. Grocery "optimistic = the whole current niche" holds for MAU only; by revenue it is 2.4-10x the $150-600 niche gross.
+
 What the three lenses say together: the only niche with a real Apify market (jobs) is the one with 50 incumbents; the four thin niches have a combined ceiling of roughly $200-1,700/month gross for every actor in them. Off-platform buyers do pay (brokers, FMCG brands, bid consultants), but they pay for whole-of-market coverage, dashboards or alerts, not raw rows, and reaching them is direct sales, which the Store does not do for us.
 
 ## 5. Cross-cutting findings
 
 **Desk research under-counted incumbents in 4 of 5 niches, and missed the monitor shape in 4 of 5.** Grocery went from "5 publishers, none monitor-shaped" to 9 actors with a 7-MAU incremental monitor on Carrefour. UK retail went from "1 + 2" to 6 + 6 with a price-history tracker. Tenders went from 3 Etimad actors to 6 with two monitors. Jobs went from 3-4 per site to 23 / 14 / 6, with incremental billing, alerts and cross-site dedupe all already on sale. Only mortgage held, and it held because the niche is empty. The desk review had already made this same correction once (Vinted, Marktplaats, Kleinanzeigen) and the second pass still found more. A search floor is not a count.
+
+REVIEW (review-agent:top5, 2026-10-03): "missed the monitor shape in 4 of 5" is overstated. Mortgage has no monitor to miss; CANDIDATES row 7 already listed sian.agency's Currys price-drop / target-price tracking; the probe-defs review had already noted memo23's daily scheduled runs on jobs. Clean misses: grocery (blackfalcondata MAF), tenders (gulfdata), and sync-network on Currys. The "2-6x" rise holds against the original desk counts; against the probe-defs re-count for jobs (11 / 9 / 4) it is 1.5-2.1x, and grocery publishers went 5 to 7 (1.4x).
 
 **ToS and robots gate three of the five.** Screwfix forbids crawling and commercial exploitation; Carrefour bans robots outright; Lulu limits use to personal non-commercial and disallows its `/api/` route; HSBC limits use to personal information. Only government tender notices are clean. The scoring table still has no legal column.
 
@@ -122,6 +132,8 @@ What the three lenses say together: the only niche with a real Apify market (job
 **Apify demand in regional niches is tiny.** Best-incumbent MAU in the four thin niches: 1, 7, 6, ≤6. ProgrammX's own four actors show 5 MAU. The user's thesis ("monitor shape on perishable sources with ≤3 incumbents") selects for empty rooms.
 
 **The method also hit its own cap.** All five agents ran out of search budget mid-pass, so each file carries "not found" cells that mean "not searched". That ambiguity is now labelled, but it cost precision on exactly the anti-bot and robots questions that matter.
+
+REVIEW (review-agent:top5, 2026-10-03): four of five; see the REVIEW under the header. The "ProgrammX's own four actors show 5 MAU" figure above comes from `PROGRAMMX_LIVE.md` (single snippet, UNVERIFIED), not from the five deep passes.
 
 **Recommended selection approach for the live session: census first, niche second.** Build peer sets from `census.csv` (group by target site using title/name/description keywords), then filter:
 
@@ -167,6 +179,8 @@ Total projected for all five was 40.1 MB. Keeping three costs about 23 MB.
 - §2 grocery: `gcc.luluhypermarket.com` robots.txt has now been seen (disallows `/api/`, `/search/`, `/promo/`, sort/filter/price params); check probe pagination params against it; add Carrefour ToS to the legal paragraph; remove "Carrefour likely uses a MAF API" as unsupported.
 - §3 retail and §5 jobs: mark KILL pre-probe. §5: Rozee id pattern `…-<city>-jobs-<7 digits>` and Bayt Cloudflare are now confirmed by incumbents.
 - §4 tenders: add no-proxy baseline for the datacenter block; PageSize "typically 100" vs the def's 50; PublishDateId default 5.
+
+REVIEW (review-agent:top5, 2026-10-03): the definition sends `PageSize=24`; 50 is PROBE_PLAN's UNVERIFIED maximum, not the def's value.
 
 **`research/NEXT_SESSION.md`**
 - Phase 4 row: replace "re-score with census counts" with the census-first peer-set selection in §5 above, including the `T` gate column.
