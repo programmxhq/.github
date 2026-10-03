@@ -1,0 +1,8 @@
+.env
+.env.*
+node_modules/
+storage/
+**/storage/
+__pycache__/
+*.pyc
+research/raw/

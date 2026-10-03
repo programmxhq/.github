@@ -1,0 +1,10 @@
+# Run log
+
+All times UTC. Agent = who did the work.
+
+| Time | Agent | Event |
+|---|---|---|
+| 2026-10-03 11:25 | orchestrator | Run started. No `.env` in repo or container; APIFY_TOKEN/DECODO_* env vars unset. |
+| 2026-10-03 11:27 | orchestrator | Network check: api.apify.com, apify.com, console.apify.com, Decodo gateway, general web all denied by egress policy (curl 403 CONNECT, WebFetch EGRESS_BLOCKED). Reachable: github.com, npm, PyPI. WebSearch works (summaries only). |
+| 2026-10-03 11:30 | orchestrator | Full run blocked; reported to user. User chose offline prep: tooling, actor template, GitHub teardowns, UNVERIFIED desk research. |
+| 2026-10-03 11:32 | orchestrator | Cloned apify/apify-docs (sparse) to scratchpad; OpenAPI Store schemas present. |
