@@ -129,7 +129,9 @@ describe('plain local run (no PPE env)', () => {
         assert.equal(items.length, 2);
         assert.ok(items.every((i) => i.changeType === 'unmonitored'));
         assert.deepEqual(chargeTotals(storageDir), {}, 'no charging log without ACTOR_TEST_PAY_PER_EVENT');
-        assert.match(run.output, /Ignored attempt to charge for an event - the Actor does not use the pay-per-event pricing/);
+        // Not a PPE run: Actor.pushData(items, event) pushes everything and charges nothing (apify@3.7.2 charging.js).
+        assert.match(run.output, /Charging: payPerEvent=false/);
+        assert.equal(readKv(storageDir, 'RUN_SUMMARY').saved, 2);
         assert.match(run.output, /Proxy health check skipped: running without a proxy/);
         assert.equal(readKv(storageDir, 'RUN_SUMMARY').stopReason, 'maxItems (2) reached');
     });

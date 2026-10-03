@@ -97,7 +97,11 @@ export class ResultSink {
     async #flushNow() {
         if (this.buffer.length === 0) return;
         let batch = this.buffer.splice(0);
-        if (this.maxItems) batch = batch.slice(0, Math.max(0, this.maxItems - this.stats.saved));
+        if (this.maxItems) {
+            const room = Math.max(0, this.maxItems - this.stats.saved);
+            this.stats.dropped += Math.max(0, batch.length - room);
+            batch = batch.slice(0, room);
+        }
         if (this.stopReason?.startsWith('charge limit')) {
             this.stats.dropped += batch.length;
             return;

@@ -33,6 +33,7 @@ response is classified "ok" (e.g. a product page with a reCAPTCHA newsletter for
 """
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
@@ -169,7 +170,8 @@ def fingerprint(status: int | None, headers: list[tuple[str, str]], body: bytes)
     for k, v in headers:
         hmap.setdefault(k.lower(), []).append(v)
     cookies = cookie_names(hmap.get("set-cookie", []))
-    text = body[:BODY_SCAN_LIMIT].decode("utf-8", "replace").lower() if body else ""
+    # html.unescape: Akamai's deny page entity-encodes text ("errors&#46;edgesuite&#46;net")
+    text = html.unescape(body[:BODY_SCAN_LIMIT].decode("utf-8", "replace")).lower() if body else ""
     signals: list[dict] = []
     seen = set()
     for vendor, kind, loc, matcher, label, src in RULES:

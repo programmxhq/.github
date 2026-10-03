@@ -106,8 +106,10 @@ def load_credentials(env_file: Path | None) -> dict[str, str]:
     candidates = [env_file] if env_file else [REPO_ROOT / ".env", RESEARCH_DIR / ".env"]
     for c in candidates:
         if c and c.is_file():
-            file_vals = parse_env_file(c)
-            break
+            # Earlier file wins per key; later files only fill missing keys
+            # (README: repo-root .env, then research/.env).
+            for k, v in parse_env_file(c).items():
+                file_vals.setdefault(k, v)
     creds = {}
     for k in CRED_KEYS:
         v = os.environ.get(k) or file_vals.get(k)
@@ -372,6 +374,7 @@ def fetch_store(client: ApiClient, guard: SpendGuard, store_dir: Path, args) -> 
         write_json_atomic(ckpt_path, ckpt)
 
     pages_this_run = 0
+    seen_ids: set[str] = set()   # ids seen this run; a page with no new id means paging stalled
     while not ckpt["complete"]:
         if args.max_pages is not None and pages_this_run >= args.max_pages:
             log(f"--max-pages {args.max_pages} reached; stopping store paging (resumable)")
@@ -384,6 +387,9 @@ def fetch_store(client: ApiClient, guard: SpendGuard, store_dir: Path, args) -> 
         items = data.get("items") or []
         count = len(items)
         total = data.get("total")
+        ids = {str(it.get("id") or f"{it.get('username')}~{it.get('name')}") for it in items if isinstance(it, dict)}
+        stalled = bool(count > 0 and seen_ids and not (ids - seen_ids))
+        seen_ids |= ids
         page_no = ckpt["pages_done"] + 1
         write_json_atomic(store_dir / f"page_{page_no:04d}.json",
                           {"_census": {"fetched_at": now_iso(), "params": params}, **(body or {})})
@@ -393,7 +399,13 @@ def fetch_store(client: ApiClient, guard: SpendGuard, store_dir: Path, args) -> 
             ckpt["total"] = total
         pages_this_run += 1
         log(f"store page {page_no}: offset={offset} count={count} total={total}")
-        if count == 0:
+        if stalled:
+            ckpt["complete"] = True
+            w = (f"page at offset {offset} returned only already-seen actors: server is probably ignoring "
+                 "or clamping offset. Stopped paging to avoid looping until --max-requests.")
+            ckpt["warnings"].append(w)
+            log("WARNING: " + w)
+        elif count == 0:
             ckpt["complete"] = True
             if isinstance(ckpt["total"], int) and ckpt["next_offset"] < ckpt["total"]:
                 w = (f"server returned 0 items at offset {offset} but total={ckpt['total']}: "
@@ -528,9 +540,11 @@ def pick_current_pricing(pricing_infos: Any, now: dt.datetime) -> tuple[dict | N
     def ts(p):
         s = p.get("startedAt") or p.get("createdAt") or ""
         try:
-            return dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
+            t = dt.datetime.fromisoformat(str(s).replace("Z", "+00:00"))
         except ValueError:
             return None
+        # A timestamp without an offset would crash the comparison with an aware `now`; assume UTC.
+        return t if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
     dated = [(ts(p), p) for p in pricing_infos if isinstance(p, dict)]
     past = [(t, p) for t, p in dated if t is not None and t <= now]
     future = any(t is not None and t > now for t, _ in dated)
@@ -603,9 +617,12 @@ def build_row(item: dict, detail: dict | None, house_owners: set[str], now: dt.d
     if isinstance(tot30, (int, float)) and tot30 > 0 and isinstance(succ30, (int, float)):
         success_rate = round(succ30 / tot30, 4)
 
-    rating = item.get("actorReviewRating", stats.get("actorReviewRating"))
-    reviews = item.get("actorReviewCount", stats.get("actorReviewCount"))
-    bookmarks = item.get("bookmarkCount", stats.get("bookmarkCount"))
+    def top_or_stats(k: str) -> Any:   # top-level value, else stats (also when top-level is null)
+        v = item.get(k)
+        return v if v is not None else stats.get(k)
+    rating = top_or_stats("actorReviewRating")
+    reviews = top_or_stats("actorReviewCount")
+    bookmarks = top_or_stats("bookmarkCount")
 
     pending = False
     history_count: Any = ""
