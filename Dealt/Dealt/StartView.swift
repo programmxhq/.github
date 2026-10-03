@@ -7,7 +7,7 @@ struct StartView: View {
     @State private var ambition: Ambition = Ambition.allCases.first ?? .fortune
     @State private var showSeed = false
     @State private var seedText = ""
-    @State private var showHall = false
+    @State private var sheet: StartSheet?
     @FocusState private var nameFocused: Bool
 
     private var accent: Color { Stage.dawn.palette.accent }
@@ -23,7 +23,10 @@ struct StartView: View {
                 nameSection
                 traitSection
                 if let heirloom = store.pendingHeirloom {
-                    InheritanceCard(heirloom: heirloom)
+                    InheritanceCard(heirloom: heirloom, parentName: heirParentName)
+                }
+                DailyCard(dayKey: store.todayKey, best: store.todayBest, accent: accent) {
+                    startDaily()
                 }
                 ambitionSection
                 seedSection
@@ -37,12 +40,15 @@ struct StartView: View {
         .safeAreaInset(edge: .bottom) { bornBar }
         .background { StageBackground(stage: .dawn) }
         .fontDesign(.rounded)
-        .sheet(isPresented: $showHall) {
-            HallOfFameSheet(allowsReset: true)
-                .environment(store)
+        .sheet(item: $sheet) { which in
+            sheetContent(which)
         }
         .onAppear {
             if name.isEmpty { name = store.suggestedName }
+            ensureUnlockedAmbition()
+        }
+        .onChange(of: store.achievements) { _, _ in
+            ensureUnlockedAmbition()
         }
         .onChange(of: store.suggestedName) { _, newValue in
             name = newValue
@@ -52,9 +58,58 @@ struct StartView: View {
         }
     }
 
+    // MARK: Sheets
+
+    @ViewBuilder
+    private func sheetContent(_ which: StartSheet) -> some View {
+        switch which {
+        case .hall:
+            HallOfFameSheet(allowsReset: true)
+                .environment(store)
+        case .achievements:
+            AchievementsView()
+                .environment(store)
+        case .family:
+            FamilyTreeView()
+                .environment(store)
+        }
+    }
+
+    /// The parent named on the inheritance card, when the heir is one of their kids.
+    private var heirParentName: String? {
+        guard store.pendingHeirloom != nil, let last = store.lineage.last else { return nil }
+        let kids: [String] = last.kidNames ?? []
+        return kids.isEmpty ? nil : last.name
+    }
+
+    /// The picker must never sit on a locked ambition.
+    private func ensureUnlockedAmbition() {
+        if !store.isUnlocked(ambition) {
+            ambition = Ambition.base.first ?? .fortune
+        }
+    }
+
     // MARK: Title
 
     private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            toolbarRow
+            titleRow
+        }
+    }
+
+    private var toolbarRow: some View {
+        HStack(spacing: 10) {
+            Spacer(minLength: 0)
+            achievementsButton
+            if !store.lineage.isEmpty {
+                familyButton
+            }
+            trophyButton
+        }
+    }
+
+    private var titleRow: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("DEALT")
@@ -69,25 +124,27 @@ struct StartView: View {
                     .padding(.top, 2)
             }
             Spacer(minLength: 8)
-            VStack(spacing: 14) {
-                trophyButton
-                DecorFan()
-            }
+            DecorFan()
+                .padding(.top, 8)
         }
     }
 
     private var trophyButton: some View {
-        Button {
-            Haptic.tap()
-            showHall = true
-        } label: {
-            Image(systemName: "trophy.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.orange)
-                .frame(width: 44, height: 44)
-                .background(.regularMaterial, in: Circle())
+        ToolbarCircleButton(symbol: "trophy.fill", color: Color.orange, label: "Hall of Fame") {
+            sheet = .hall
         }
-        .accessibilityLabel("Hall of Fame")
+    }
+
+    private var achievementsButton: some View {
+        ToolbarCircleButton(symbol: "rosette", color: Color.purple, label: "Achievements") {
+            sheet = .achievements
+        }
+    }
+
+    private var familyButton: some View {
+        ToolbarCircleButton(symbol: "tree.fill", color: Color.green, label: "Family tree") {
+            sheet = .family
+        }
     }
 
     // MARK: Name
@@ -173,13 +230,7 @@ struct StartView: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 12) {
                     ForEach(Ambition.allCases, id: \.self) { item in
-                        Button {
-                            Haptic.tap()
-                            withAnimation(.spring(duration: 0.3, bounce: 0.3)) { ambition = item }
-                        } label: {
-                            AmbitionTile(ambition: item, selected: item == ambition, accent: accent)
-                        }
-                        .buttonStyle(PressableStyle())
+                        ambitionButton(item)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -195,6 +246,20 @@ struct StartView: View {
                 .id(ambition)
                 .transition(.opacity)
         }
+    }
+
+    private func ambitionButton(_ item: Ambition) -> some View {
+        let unlocked: Bool = store.isUnlocked(item)
+        return Button {
+            guard unlocked else { return }
+            Haptic.tap()
+            withAnimation(.spring(duration: 0.3, bounce: 0.3)) { ambition = item }
+        } label: {
+            AmbitionTile(ambition: item, selected: unlocked && item == ambition,
+                         locked: !unlocked, accent: accent)
+        }
+        .buttonStyle(PressableStyle())
+        .disabled(!unlocked)
     }
 
     // MARK: Seed
@@ -242,6 +307,14 @@ struct StartView: View {
                                     Color(uiColor: .systemBackground).opacity(0.85)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
+        }
+    }
+
+    private func startDaily() {
+        nameFocused = false
+        Haptic.success()
+        withAnimation(.easeInOut(duration: 0.4)) {
+            store.startDaily()
         }
     }
 
@@ -298,10 +371,22 @@ private struct DecorFan: View {
 private struct AmbitionTile: View {
     let ambition: Ambition
     let selected: Bool
+    let locked: Bool
     let accent: Color
 
     private var borderColor: Color {
         selected ? accent : Color.primary.opacity(0.08)
+    }
+
+    private var emojiOpacity: Double { locked ? 0.35 : 1 }
+    private var emojiGrayscale: Double { locked ? 1 : 0 }
+    private var nameColor: Color { locked ? Color.secondary : Color.primary }
+    private var hintText: String { locked ? lockHint : "" }
+
+    /// "🔒 Dynasty: Reach the third generation." for a locked ambition.
+    private var lockHint: String {
+        guard let needed = ambition.unlockedBy else { return "🔒 Locked" }
+        return "🔒 " + needed.name + ": " + needed.detail
     }
 
     var body: some View {
@@ -309,14 +394,13 @@ private struct AmbitionTile: View {
         return VStack(alignment: .leading, spacing: 6) {
             Text(def.emoji)
                 .font(.system(size: 34))
+                .grayscale(emojiGrayscale)
+                .opacity(emojiOpacity)
             Text(def.name)
                 .font(.headline)
+                .foregroundStyle(nameColor)
                 .lineLimit(1)
-            Text(def.goalText)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.leading)
-                .lineLimit(4)
+            detailText(def)
             Spacer(minLength: 0)
         }
         .foregroundStyle(Color.primary)
@@ -329,11 +413,32 @@ private struct AmbitionTile: View {
         }
         .shadow(color: selected ? accent.opacity(0.25) : Color.clear, radius: 10, x: 0, y: 4)
         .scaleEffect(selected ? 1.04 : 1)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(hintText)
+    }
+
+    @ViewBuilder
+    private func detailText(_ def: AmbitionDef) -> some View {
+        if locked {
+            Text(lockHint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(5)
+                .minimumScaleFactor(0.85)
+        } else {
+            Text(def.goalText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(4)
+        }
     }
 }
 
 private struct InheritanceCard: View {
     let heirloom: Heirloom
+    var parentName: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -344,6 +449,11 @@ private struct InheritanceCard: View {
                     .frame(width: 52, height: 52)
                     .background(Color.yellow.opacity(0.2), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
+                    if let parent = parentName {
+                        Text("Born to " + parent)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.orange)
+                    }
                     Text(heirloom.title)
                         .font(.headline)
                     Text(heirloom.blurb)
@@ -360,6 +470,99 @@ private struct InheritanceCard: View {
                     .strokeBorder(Color.yellow.opacity(0.6), lineWidth: 1.5)
             }
         }
+    }
+}
+
+/// Which sheet the start screen is showing.
+private enum StartSheet: String, Identifiable {
+    case hall, achievements, family
+
+    var id: String { rawValue }
+}
+
+/// A round material button used in the start screen's top row.
+private struct ToolbarCircleButton: View {
+    let symbol: String
+    let color: Color
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptic.tap()
+            action()
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 44, height: 44)
+                .background(.regularMaterial, in: Circle())
+        }
+        .accessibilityLabel(label)
+    }
+}
+
+/// The Daily Challenge: one seeded life per day, outside the family line.
+private struct DailyCard: View {
+    let dayKey: String
+    let best: Int?
+    let accent: Color
+    let onPlay: () -> Void
+
+    private var bestText: String {
+        if let b = best { return "Best: " + String(b) }
+        return "Not played yet"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(text: "Daily Challenge")
+            VStack(alignment: .leading, spacing: 12) {
+                header
+                playButton
+            }
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(Color.orange.opacity(0.45), lineWidth: 1.5)
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 14) {
+            Text("📅")
+                .font(.system(size: 34))
+                .frame(width: 52, height: 52)
+                .background(Color.orange.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Today's life")
+                    .font(.headline)
+                Text(dayKey)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Text(bestText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(best == nil ? Color.secondary : Color.orange)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var playButton: some View {
+        Button {
+            onPlay()
+        } label: {
+            Text("Play today's life")
+                .font(.subheadline.weight(.bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .foregroundStyle(Color.orange)
+                .background(Color.orange.opacity(0.15), in: Capsule())
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityHint("Same life for every player today. Does not affect your family.")
     }
 }
 
@@ -438,7 +641,8 @@ struct HallRow: View {
     var showEpitaph: Bool = true
 
     private var detailText: String {
-        "\(record.rank) · age \(record.age) · Gen \(record.generation)"
+        let base = "\(record.rank) · age \(record.age) · Gen \(record.generation)"
+        return record.daily == true ? base + " · 📅" : base
     }
 
     private var ambitionText: String {

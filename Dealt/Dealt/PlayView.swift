@@ -62,6 +62,7 @@ struct PlayView: View {
                     AmbitionRow(life: life, accent: accent)
                     StatsRow(life: life)
                     traitRow(life, accent: accent)
+                    FamilyRow(life: life)
                     handSection(life, accent: accent)
                     Color.clear
                         .frame(height: 1)
@@ -374,7 +375,11 @@ private struct PlayHeader: View {
                     .minimumScaleFactor(0.6)
                 HStack(spacing: 6) {
                     Chip(text: stageText, color: accent)
-                    Chip(text: genText, color: Color.secondary)
+                    if life.isDaily {
+                        Chip(text: "📅 Daily", color: Color.orange)
+                    } else {
+                        Chip(text: genText, color: Color.secondary)
+                    }
                 }
             }
             Spacer(minLength: 8)
@@ -390,6 +395,48 @@ private struct PlayHeader: View {
             }
             .accessibilityElement(children: .combine)
         }
+    }
+}
+
+// MARK: - Family
+
+/// Spouse and kids, once the life has them.
+private struct FamilyRow: View {
+    let life: Life
+
+    private var hasFamily: Bool {
+        life.spouseName != nil || !life.kidNames.isEmpty
+    }
+
+    private var kidsText: String {
+        "👶 " + life.kidNames.joined(separator: ", ")
+    }
+
+    var body: some View {
+        if hasFamily {
+            ScrollView(.horizontal) {
+                HStack(spacing: 6) {
+                    if let spouse = life.spouseName {
+                        Chip(text: "💍 " + spouse, color: Color.pink)
+                    }
+                    if !life.kidNames.isEmpty {
+                        Chip(text: kidsText, color: Color.teal)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .scrollIndicators(.hidden)
+            .padding(.horizontal, -16)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilityText)
+        }
+    }
+
+    private var accessibilityText: String {
+        var parts: [String] = []
+        if let spouse = life.spouseName { parts.append("Married to " + spouse) }
+        if !life.kidNames.isEmpty { parts.append("Kids: " + life.kidNames.joined(separator: ", ")) }
+        return parts.joined(separator: ". ")
     }
 }
 

@@ -136,6 +136,10 @@ struct DeltaChip: View {
         if text.hasPrefix("+") || text.hasPrefix("✨") || text.hasPrefix("Income") {
             return .green
         }
+        // Family news: a spouse ("💍 Name") or kids ("👶 A, B").
+        if text.hasPrefix("💍") || text.hasPrefix("👶") {
+            return .green
+        }
         if text.hasPrefix("-") || text.hasPrefix("−") || text.hasPrefix("✖️") || text.hasPrefix("🪦") {
             return .red
         }
