@@ -460,3 +460,12 @@ Tuned by simulating thousands of lives against the real content (random and goal
 - **Cost of living** ($k/yr): Dawn 0 · Bloom 1 · Build 8 · Harvest 8 · Dusk 6.
 - **Fortune**: die with $1M+ (money ≥ 1000). **Wanderer**: 5 of the 6 `saw_*` flags.
 - Resulting success rates: random play ≈ Elder 15%, Fortune 27%, Renown 25%, Scholar 50%, Wanderer 10%, Hearth 3%; a player chasing the goal succeeds most of the time.
+
+## 11. Round 2 Features
+
+- **Named family:** setting the `married` flag generates `life.spouseName`, and setting `kids` generates 1–3 `life.kidNames` (seeded RNG). Clearing `married` clears the spouse. Cards render `{spouse}`/`{kid}`/`{kids}`/`{name}` when dealt; outcome text is rendered after the effect applies, so a wedding outcome can name the new spouse. The heir's suggested name is one of the previous life's kids.
+- **Lineage:** `GameStore.lineage` records every non-daily life of the current family, including `heirloomPassed`, the spouse and the kids. The family tree reads from it, and Reset lineage clears it.
+- **Achievements** (`Achievements.swift`): 12 are evaluated at death and persist across lineage resets. `Ambition.legacy` (die with kids, `own_home` and $300k+) needs **Dynasty** (generation 3). `Ambition.thrill` (win 8 gambles in one life) needs **Dicey** (5 gambles won). The daily challenge only uses `Ambition.base`.
+- **Daily challenge:** key `yyyy-MM-dd` → FNV-1a seed → name, surname, birth trait, ambition, stats and first hand are identical on every device. Daily lives get no heirloom, don't touch generation, surname or lineage, and store `dailyBest[key]`.
+- **Save compatibility:** new `Life` fields decode with defaults through `init(from:)`, and new `SaveData`/`LifeRecord` fields are optional.
+- **Content:** `ContentExtra.swift` adds 13 late-Dusk cards (so very old ages are no longer padded with fillers), 14 family cards and 8 Legacy/Thrill ambition cards, for 167 in total.

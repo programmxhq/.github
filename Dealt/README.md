@@ -12,6 +12,10 @@ A small life-simulation game for iPhone, built with SwiftUI. No dependencies, no
 - **Traits** (16 of them) are earned through choices. They unlock or lock cards, shift the per-chapter drift and change gamble luck, so two lives see different decks.
 - **Life stages:** Dawn 🌱 → Bloom 🌸 → Build 🏗️ → Harvest 🍂 → Dusk 🕯️. Each stage has its own colour theme and card pool.
 - **Death and legacy:** a life ends with a tombstone, an epitaph, a score and a rank. You then pass one **heirloom** to your heir: a trait, some cash, or a keepsake that unlocks a secret card. The family name carries on, and the Hall of Fame keeps your best lives.
+- **A named family:** marry and you get a spouse with a name; have kids and they're named too. Family cards use those names, and your heir defaults to one of your kids. The **family tree** shows every generation and what each one passed down.
+- **Achievements:** 12 to collect. **Dynasty** (reach the third generation) unlocks the **Legacy** 🌳 ambition, and **Dicey** (win 5 gambles in one life) unlocks **Thrill** 🎢.
+- **Daily challenge:** one seeded life per day, the same for every player. It sits outside your family line, and your best score for the day is saved.
+- **Share your epitaph:** the tombstone renders to an image you can share from the summary screen.
 
 A full run takes 5–10 minutes. The game saves automatically after every action.
 
@@ -47,8 +51,11 @@ The project uses a synchronized folder, so any `.swift` file added to `Dealt/Dea
 | `DealtApp.swift` | App entry point and root router |
 | `Theme.swift` | Stage palettes and shared components (stat ring, card face, chips) |
 | `StartView.swift` / `PlayView.swift` / `SummaryView.swift` | The three screens, plus the Hall of Fame sheet |
+| `Achievements.swift` | The 12 achievements, unlock rules, Daily Challenge key and seed |
+| `AchievementsView.swift` / `FamilyTreeView.swift` | Achievements sheet and family tree sheet |
 | `ContentCore.swift` | Trait and ambition tables, names, filler cards, keepsake cards |
-| `ContentEarly.swift` / `ContentBuild.swift` / `ContentLate.swift` | 132 cards across all stages and ambitions |
+| `ContentEarly.swift` / `ContentBuild.swift` / `ContentLate.swift` / `ContentExtra.swift` | 167 cards across all stages, family events and 8 ambitions |
+| `DealtTests/DealtTests.swift` | 40 engine tests (Swift Testing), run with ⌘U |
 
 `DESIGN.md` has the full design spec and the balance notes.
 
@@ -63,7 +70,7 @@ The project uses a synchronized folder, so any `.swift` file added to `Dealt/Dea
         lose: Effect(heart: -8, text: "It did not."))]),
 ```
 
-Swift requires arguments in declaration order. For `Effect` that order is `body, mind, heart, bonds, money, income, add, remove, set, clear, text, dies`. Hands are only dealt at certain ages (see `DESIGN.md` §9), so each card's age range must include at least one of them.
+Card text can use `{spouse}`, `{kid}`, `{kids}` and `{name}`; the engine fills them in from the current life. Swift requires arguments in declaration order. For `Effect` that order is `body, mind, heart, bonds, money, income, add, remove, set, clear, text, dies`. Hands are only dealt at certain ages (see `DESIGN.md` §9), so each card's age range must include at least one of them.
 
 ## Tooling (no Mac needed)
 
