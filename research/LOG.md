@@ -10,3 +10,4 @@ All times UTC. Agent = who did the work.
 | 2026-10-03 11:32 | orchestrator | Cloned apify/apify-docs (sparse) to scratchpad; OpenAPI Store schemas present. |
 | 2026-10-03 11:39 | orchestrator | Launched 5 parallel agents: census-agent (opus), probe-agent (opus), template-agent (opus), teardown-agent (opus), desk-agent (fable). |
 | 2026-10-03 11:49 | orchestrator | teardown-agent done: 6 source-based teardowns (3 current Apify-owned repos, 2 from 2022), 27 closed-source stubs. Launched review-agent (opus) on teardowns. |
+| 2026-10-03 11:50 | orchestrator | census-agent done: API_SPEC_NOTES.md + census tool, 9/9 offline tests pass, all fields spec-verified only. Launched review-agent:census (opus). |

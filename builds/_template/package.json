@@ -14,7 +14,7 @@
     },
     "scripts": {
         "start": "node src/main.js",
-        "test": "node --test --test-concurrency=1 test/"
+        "test": "node --test --test-concurrency=1 test/*.test.js"
     },
     "license": "UNLICENSED"
 }
