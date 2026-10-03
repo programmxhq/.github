@@ -13,7 +13,7 @@ This session (2026-10-03) could not reach Apify or Decodo, so it built and revie
 ```bash
 cd research/tools/census && pip install -r requirements.txt && python -m pytest -q   # 16 tests
 python census.py --no-auth --page-size 50 --max-pages 1 --fresh                      # free, 1 request
-cd ../ && pip install -r probe/requirements.txt && python -m pytest probe/tests -q     # 56 tests
+cd ../ && pip install -r probe/requirements.txt && python -m pytest probe/tests -q     # 71 tests
 python -m probe health                     # exit IP via Decodo. If CONNECT is refused: python -m probe --upstream env health
 python -m probe health --sticky --count 3
 cd ../../builds/_template && npm ci && npm test                                       # 17 tests

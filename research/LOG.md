@@ -22,3 +22,4 @@ All times UTC. Agent = who did the work.
 | 2026-10-03 12:07 | orchestrator | Wrote research/NEXT_SESSION.md runbook (setup, smoke checks, phase map, guardrails, weak spots). |
 | 2026-10-03 12:17 | probe-def-agent (opus) → orchestrator | 5 probe definitions written (30 URLs each, 40.1 MB projected total, validate exit 0); PROBE_PLAN.md. Launched review-agent:probe-defs (opus). |
 | 2026-10-03 12:27 | review-agent:probe-defs (opus) → orchestrator | Probe-defs review PASS WITH FIXES: 3 markers counted 0 on plausible markup (fixed), Lulu robots header fixed, per-host breakdown added, jobs H 3→2. Orchestrator replaced quadratic dedupe lookaheads with linear `distinct: true` regex option + perf test. 71/71 tests. |
+| 2026-10-03 12:27 | orchestrator | Offline prep complete. All phase outputs reviewed. Totals: census 16 tests, probe 71 tests, template 17 tests. |

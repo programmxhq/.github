@@ -15,7 +15,7 @@ pip install -r research/tools/probe/requirements.txt
 # Credentials: env vars, or KEY=VALUE lines in the repo-root .env (gitignored). Never commit them.
 export DECODO_USER='...'  DECODO_PASS='...'  DECODO_HOST='gate.decodo.com:7000'
 cd research/tools                # every command below runs from here
-python -m pytest probe/tests -q  # 56 offline tests, ~6 s
+python -m pytest probe/tests -q  # 71 offline tests, ~6 s
 ```
 
 ## Run order
