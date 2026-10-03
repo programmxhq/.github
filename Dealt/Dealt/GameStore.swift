@@ -367,7 +367,7 @@ import Observation
         if l.stats.body <= 0 { return .body }
         if l.age >= 104 { return .cap }
         if l.age >= 68 {
-            let risk = ((l.age - 64) * 2 + max(0, 50 - l.stats.body) / 2).clamped(0...95)
+            let risk = ((l.age - 72) * 2 + max(0, 40 - l.stats.body) / 2).clamped(0...95)
             if rng.roll(risk) { return .oldAge }
         }
         return nil

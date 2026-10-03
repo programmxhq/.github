@@ -111,9 +111,9 @@ enum Stage: String, Codable, CaseIterable {
         switch self {
         case .dawn: return 0
         case .bloom: return 1
-        case .build: return 6
-        case .harvest: return 6
-        case .dusk: return 5
+        case .build: return 8
+        case .harvest: return 8
+        case .dusk: return 6
         }
     }
 
@@ -176,7 +176,7 @@ enum Ambition: String, Codable, CaseIterable, Hashable {
     func achieved(_ life: Life) -> Bool {
         switch self {
         case .fortune:
-            return life.money >= 500
+            return life.money >= 1000
         case .renown:
             return life.has(.famous) && life.stats.bonds >= 60
         case .hearth:
@@ -184,7 +184,7 @@ enum Ambition: String, Codable, CaseIterable, Hashable {
         case .scholar:
             return life.stats.mind >= 85 && life.has(flag: "published")
         case .wanderer:
-            return life.flags.filter { $0.hasPrefix("saw_") }.count >= 4
+            return life.flags.filter { $0.hasPrefix("saw_") }.count >= 5
         case .elder:
             return life.age >= 90 && life.stats.heart >= 50
         }
@@ -195,7 +195,7 @@ enum Ambition: String, Codable, CaseIterable, Hashable {
         let p: Double
         switch self {
         case .fortune:
-            p = Double(life.money) / 500
+            p = Double(life.money) / 1000
         case .renown:
             p = (life.has(.famous) ? 0.5 : 0) + Double(life.stats.bonds) / 120
         case .hearth:
@@ -205,7 +205,7 @@ enum Ambition: String, Codable, CaseIterable, Hashable {
         case .scholar:
             p = Double(life.stats.mind) / 170 + (life.has(flag: "published") ? 0.5 : 0)
         case .wanderer:
-            p = Double(life.flags.filter { $0.hasPrefix("saw_") }.count) / 4
+            p = Double(life.flags.filter { $0.hasPrefix("saw_") }.count) / 5
         case .elder:
             p = Double(life.age) / 90
         }

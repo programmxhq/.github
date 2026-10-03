@@ -77,7 +77,7 @@ extension AmbitionDef {
     static let all: [Ambition: AmbitionDef] = [
         .fortune: AmbitionDef(name: "Fortune", emoji: "💰",
                               blurb: "Money can't buy happiness, but it can rent a very convincing imitation.",
-                              goalText: "Die with $500k+",
+                              goalText: "Die a millionaire ($1M+)",
                               wonLine: "Died rich, exactly as planned.",
                               lostLine: "Died chasing a number that never picked up the phone."),
         .renown: AmbitionDef(name: "Renown", emoji: "🌟",
@@ -97,7 +97,7 @@ extension AmbitionDef {
                               lostLine: "Knew a great deal. Wrote down too little of it."),
         .wanderer: AmbitionDef(name: "Wanderer", emoji: "🧭",
                                blurb: "Home is wherever the luggage got lost this time.",
-                               goalText: "See 4 far-flung places",
+                               goalText: "See 5 of the world's 6 far corners",
                                wonLine: "Died with sand in every pocket.",
                                lostLine: "Had the map. Never quite caught the bus."),
         .elder: AmbitionDef(name: "Elder", emoji: "🕯️",

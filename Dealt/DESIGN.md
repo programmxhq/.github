@@ -451,3 +451,12 @@ Build settings: `IPHONEOS_DEPLOYMENT_TARGET = 17.0`, `SWIFT_VERSION = 5.9` (or 6
 - `Ambition.progress` caps at 0.99 until achieved. `Keepsake.forStat(_:)` maps highest stat → keepsake. `Card.teaser` gives the first sentence. `Choice.odds` gives base gamble odds. `Life.fullName`.
 - **Ages a hand is dealt at** (card `ages` ranges must cover at least one of these): Dawn 0, 4, 8 · Bloom 12, 15, 18, 21 · Build 24, 28, 32, 36, 40, 44 · Harvest 48, 52, 56, 60, 64 · Dusk 68, 71, 74, 77, 80, 83, 86, 89, 92, 95, 98, 101, 104.
 - Swift language mode 5, iOS 17 deployment target.
+
+## 10. Balance Pass (from `tools/simulate.py`, supersedes numbers above)
+
+Tuned by simulating thousands of lives against the real content (random and goal-greedy policies):
+
+- **Old-age risk** per Dusk turn: `(age - 72) * 2 + max(0, 40 - body) / 2`, clamped 0...95. Mean death ≈ 82-84 (was ≈ 77, Elder was ~2%).
+- **Cost of living** ($k/yr): Dawn 0 · Bloom 1 · Build 8 · Harvest 8 · Dusk 6.
+- **Fortune**: die with $1M+ (money ≥ 1000). **Wanderer**: 5 of the 6 `saw_*` flags.
+- Resulting success rates: random play ≈ Elder 15%, Fortune 27%, Renown 25%, Scholar 50%, Wanderer 10%, Hearth 3%; a player chasing the goal succeeds most of the time.

@@ -100,7 +100,7 @@ AMBITIONS = ['fortune', 'renown', 'hearth', 'scholar', 'wanderer', 'elder']
 def stage(age):
     return 'dawn' if age < 12 else 'bloom' if age < 24 else 'build' if age < 48 else 'harvest' if age < 68 else 'dusk'
 YEARS = dict(dawn=4, bloom=3, build=4, harvest=4, dusk=3)
-COL = dict(dawn=0, bloom=1, build=6, harvest=6, dusk=5)
+COL = dict(dawn=0, bloom=1, build=8, harvest=8, dusk=6)
 STAGE_AGES = dict(dawn=(0, 11), bloom=(12, 23), build=(24, 47), harvest=(48, 67), dusk=(68, 104))
 cl = lambda v: max(0, min(100, v))
 
@@ -127,11 +127,11 @@ def eligible(card, L):
 
 def achieved(L):
     a, s, f = L['ambition'], L['stats'], L['flags']
-    if a == 'fortune': return L['money'] >= 500
+    if a == 'fortune': return L['money'] >= 1000
     if a == 'renown': return 'famous' in L['traits'] and s['bonds'] >= 60
     if a == 'hearth': return 'married' in f and 'kids' in f and s['bonds'] >= 70
     if a == 'scholar': return s['mind'] >= 85 and 'published' in f
-    if a == 'wanderer': return sum(x.startswith('saw_') for x in f) >= 4
+    if a == 'wanderer': return sum(x.startswith('saw_') for x in f) >= 5
     if a == 'elder': return L['age'] >= 90 and s['heart'] >= 50
 
 def apply(e, L):
@@ -213,7 +213,7 @@ def play(policy, rnd, stats):
         if L['stats']['body'] <= 0: return L, 'body'
         if L['age'] >= 104: return L, 'cap'
         if L['age'] >= 68:
-            risk = max(0, min(95, (L['age'] - 64) * 2 + max(0, 50 - L['stats']['body']) // 2))
+            risk = max(0, min(95, (L['age'] - 72) * 2 + max(0, 40 - L['stats']['body']) // 2))
             if rnd.random() * 100 < risk: return L, 'oldAge'
 
 def report(policy):
