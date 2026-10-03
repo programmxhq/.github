@@ -2,12 +2,16 @@ import SwiftUI
 
 struct PlayView: View {
     @Environment(GameStore.self) private var store
-    @Namespace private var cardNS
+    @AppStorage("dealt.tutorialSeen") private var tutorialSeen = false
+    @State private var showTutorial = false
     @State private var infoTrait: Trait?
     /// The card (and choice) just played. `choose()` collapses the store's expanded card at once,
     /// so we keep showing it locally behind the outcome sheet until "Live on".
     @State private var playedCard: Card?
     @State private var playedIndex: Int?
+    /// The turn whose hand has already played its deal-in animation, so closing a card
+    /// does not re-deal the rows.
+    @State private var dealtTurn: Int?
 
     var body: some View {
         Group {
@@ -19,6 +23,10 @@ struct PlayView: View {
             }
         }
         .fontDesign(.rounded)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+        .onAppear {
+            maybeShowTutorial()
+        }
     }
 
     // MARK: - Haptic triggers
@@ -58,7 +66,9 @@ struct PlayView: View {
                     Color.clear
                         .frame(height: 0)
                         .id("top")
-                    PlayHeader(life: life, accent: accent)
+                    PlayHeader(life: life, accent: accent) {
+                        openTutorial()
+                    }
                     AmbitionRow(life: life, accent: accent)
                     StatsRow(life: life)
                     traitRow(life, accent: accent)
@@ -91,6 +101,7 @@ struct PlayView: View {
             }
         }
         .background { backgroundLayer(life.stage) }
+        .overlay { tutorialLayer(accent: accent) }
         .sheet(item: toastBinding) { toast in
             OutcomeSheet(toast: toast, accent: accent) {
                 finishTurn()
@@ -111,6 +122,41 @@ struct PlayView: View {
                 .transition(.opacity)
         }
         .animation(.easeInOut(duration: 0.8), value: stage)
+    }
+
+    // MARK: - Tutorial
+
+    @ViewBuilder
+    private func tutorialLayer(accent: Color) -> some View {
+        if showTutorial {
+            TutorialOverlay(accent: accent) {
+                finishTutorial()
+            }
+            .transition(.opacity)
+        }
+    }
+
+    /// First run only: show the coach marks on a brand-new life.
+    private func maybeShowTutorial() {
+        guard !tutorialSeen, let life = store.life, life.turn == 0 else { return }
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showTutorial = true
+        }
+    }
+
+    private func openTutorial() {
+        guard store.toast == nil else { return }
+        Haptic.tap()
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showTutorial = true
+        }
+    }
+
+    private func finishTutorial() {
+        tutorialSeen = true
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showTutorial = false
+        }
     }
 
     // MARK: - Traits
@@ -161,19 +207,24 @@ struct PlayView: View {
             handContent(life, accent: accent)
         }
         .id(life.turn)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .transition(.opacity)
+    }
+
+    private var expandTransition: AnyTransition {
+        AnyTransition.scale(scale: 0.96, anchor: .top).combined(with: .opacity)
     }
 
     @ViewBuilder
     private func handContent(_ life: Life, accent: Color) -> some View {
         if let card = shownCard {
             expandedCard(card, accent: accent)
+                .transition(expandTransition)
         } else if let played = resolvedEntry(life) {
             resolvedPanel(played, accent: accent)
+                .transition(.opacity)
         } else {
-            handCaption(life)
-            fan(accent: accent)
-            driftButton
+            handList(life, accent: accent)
+                .transition(.opacity)
         }
     }
 
@@ -190,6 +241,7 @@ struct PlayView: View {
                 .font(.system(size: 44))
             Text(entry.title)
                 .font(.headline)
+                .multilineTextAlignment(.center)
             Text(entry.text)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -206,55 +258,42 @@ struct PlayView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
+    private func handList(_ life: Life, accent: Color) -> some View {
+        VStack(spacing: 12) {
+            handCaption(life)
+            cardRows(life, accent: accent)
+            driftButton
+        }
+        .onAppear {
+            dealtTurn = life.turn
+        }
+    }
+
     private func handCaption(_ life: Life) -> some View {
         let years = life.stage.yearsPerTurn
         let caption = "The next \(years) years · play one"
-        return HStack {
+        return HStack(alignment: .firstTextBaseline) {
             Text("Your hand")
                 .font(.headline)
-            Spacer()
+            Spacer(minLength: 8)
             Text(caption)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
         }
         .padding(.top, 4)
     }
 
-    private func fan(accent: Color) -> some View {
+    private func cardRows(_ life: Life, accent: Color) -> some View {
         let cards = store.hand
-        let count = cards.count
-        return HStack(alignment: .top, spacing: 8) {
+        let animateIn = dealtTurn != life.turn
+        return VStack(spacing: 10) {
             ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                Button {
+                DealtCardRow(card: card, index: index, accent: accent, animateIn: animateIn) {
                     openCard(card)
-                } label: {
-                    CardFace(card: card, expanded: false, tint: accent)
                 }
-                .buttonStyle(PressableStyle())
-                .matchedGeometryEffect(id: card.id, in: cardNS)
-                .rotationEffect(.degrees(fanAngle(index, count)), anchor: .bottom)
-                .offset(y: fanDrop(index, count))
-                .zIndex(fanZ(index, count))
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 4)
-        .padding(.bottom, 14)
-    }
-
-    private func fanAngle(_ index: Int, _ count: Int) -> Double {
-        let mid = Double(count - 1) / 2
-        return (Double(index) - mid) * 6
-    }
-
-    private func fanDrop(_ index: Int, _ count: Int) -> CGFloat {
-        let mid = Double(count - 1) / 2
-        return CGFloat(abs(Double(index) - mid) * 12)
-    }
-
-    private func fanZ(_ index: Int, _ count: Int) -> Double {
-        let mid = Double(count - 1) / 2
-        return 10 - abs(Double(index) - mid)
     }
 
     private var driftButton: some View {
@@ -283,7 +322,6 @@ struct PlayView: View {
     private func expandedCard(_ card: Card, accent: Color) -> some View {
         VStack(spacing: 12) {
             CardFace(card: card, expanded: true, tint: accent)
-                .matchedGeometryEffect(id: card.id, in: cardNS)
                 .overlay(alignment: .topLeading) {
                     backButton
                 }
@@ -293,7 +331,6 @@ struct PlayView: View {
                                  highlighted: store.toast != nil && playedIndex == index)
                 }
             }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -357,14 +394,70 @@ struct PlayView: View {
     }
 }
 
+// MARK: - Hand row
+
+/// A hand row that deals in (slides up and fades) with a small per-index delay.
+private struct DealtCardRow: View {
+    let card: Card
+    let index: Int
+    let accent: Color
+    let onTap: () -> Void
+
+    @State private var shown: Bool
+
+    init(card: Card, index: Int, accent: Color, animateIn: Bool, onTap: @escaping () -> Void) {
+        self.card = card
+        self.index = index
+        self.accent = accent
+        self.onTap = onTap
+        self._shown = State(initialValue: !animateIn)
+    }
+
+    private var rowOffset: CGFloat { shown ? 0 : 36 }
+    private var rowOpacity: Double { shown ? 1 : 0 }
+
+    var body: some View {
+        Button {
+            onTap()
+        } label: {
+            CardRow(card: card, tint: accent)
+        }
+        .buttonStyle(PressableStyle())
+        .offset(y: rowOffset)
+        .opacity(rowOpacity)
+        .onAppear {
+            dealIn()
+        }
+    }
+
+    private func dealIn() {
+        guard !shown else { return }
+        let delay: Double = Double(index) * 0.06
+        withAnimation(Animation.dealtSpring.delay(delay)) {
+            shown = true
+        }
+    }
+}
+
 // MARK: - Header
 
 private struct PlayHeader: View {
     let life: Life
     let accent: Color
+    let onHelp: () -> Void
+
+    @ScaledMetric(relativeTo: .largeTitle) private var ageSize: CGFloat = 46
+
+    init(life: Life, accent: Color, onHelp: @escaping () -> Void) {
+        self.life = life
+        self.accent = accent
+        self.onHelp = onHelp
+    }
 
     private var stageText: String { life.stage.emoji + " " + life.stage.title }
     private var genText: String { "Gen " + String(life.generation) }
+    /// Grows with Dynamic Type, but not without bound.
+    private var ageFontSize: CGFloat { min(ageSize, 66) }
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -380,21 +473,41 @@ private struct PlayHeader: View {
                     } else {
                         Chip(text: genText, color: Color.secondary)
                     }
+                    helpButton
                 }
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: -4) {
                 Text(String(life.age))
-                    .font(.system(size: 46, weight: .heavy, design: .rounded))
+                    .font(.system(size: ageFontSize, weight: .heavy, design: .rounded))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .contentTransition(.numericText(value: Double(life.age)))
                     .animation(.dealtSpring, value: life.age)
                 Text("years old")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+            .layoutPriority(1)
             .accessibilityElement(children: .combine)
         }
+    }
+
+    private var helpButton: some View {
+        Button {
+            onHelp()
+        } label: {
+            Image(systemName: "questionmark")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .padding(7)
+                .background(.thinMaterial, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("How to play")
     }
 }
 
@@ -473,7 +586,7 @@ private struct AmbitionRow: View {
             Text(def.goalText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -617,6 +730,12 @@ private struct RecentRow: View {
 private struct RecentLine: View {
     let entry: HistoryEntry
 
+    @ScaledMetric(relativeTo: .caption) private var ageColumn: CGFloat = 28
+
+    init(entry: HistoryEntry) {
+        self.entry = entry
+    }
+
     private var line: String {
         entry.title + " — " + entry.choice
     }
@@ -627,7 +746,8 @@ private struct RecentLine: View {
                 .font(.caption.weight(.bold))
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
-                .frame(width: 28, alignment: .trailing)
+                .lineLimit(1)
+                .frame(minWidth: ageColumn, alignment: .trailing)
             Text(entry.emoji)
                 .font(.subheadline)
             Text(line)
@@ -695,6 +815,7 @@ private struct OutcomeSheet: View {
             .padding(.bottom, 12)
         }
         .fontDesign(.rounded)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .presentationDetents([.medium])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(28)
@@ -715,5 +836,149 @@ private struct OutcomeSheet: View {
                 .padding(.vertical, 5)
                 .background(color.opacity(0.14), in: Capsule())
         }
+    }
+}
+
+// MARK: - Tutorial
+
+private struct TutorialStep {
+    let emoji: String
+    let title: String
+    let text: String
+}
+
+/// First-run coach marks: a dimmed screen with a three-step card at the bottom.
+/// Also reopened from the "?" button in the header.
+private struct TutorialOverlay: View {
+    let accent: Color
+    let onFinish: () -> Void
+
+    @State private var step: Int = 0
+
+    init(accent: Color, onFinish: @escaping () -> Void) {
+        self.accent = accent
+        self.onFinish = onFinish
+    }
+
+    private static let steps: [TutorialStep] = [
+        TutorialStep(emoji: "📖", title: "Your life, in chapters",
+                     text: "Every few years, life deals you three cards. Each hand is one chapter of your story."),
+        TutorialStep(emoji: "🃏", title: "Play one, skip two",
+                     text: "Tap a card to see its choices. 🎲 choices are gambles, and their odds are shown. Cards you skip may come back later."),
+        TutorialStep(emoji: "🎯", title: "Your stats & ambition",
+                     text: "Body, Mind, Heart and Bonds drift with age. Chase your ambition bar. When the life ends, pass an heirloom on.")
+    ]
+
+    private var lastIndex: Int { TutorialOverlay.steps.count - 1 }
+    private var isLast: Bool { step >= lastIndex }
+    private var current: TutorialStep { TutorialOverlay.steps[min(max(step, 0), lastIndex)] }
+    private var nextTitle: String { isLast ? "Got it" : "Next" }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { }
+                .accessibilityHidden(true)
+            ViewThatFits(in: .vertical) {
+                coachCard
+                ScrollView {
+                    coachCard
+                }
+                .scrollIndicators(.hidden)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 24)
+            .padding(.bottom, 12)
+        }
+        .accessibilityAddTraits(.isModal)
+    }
+
+    private var coachCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                stepDots
+                Spacer()
+                skipButton
+            }
+            stepContent
+                .id(step)
+                .transition(.opacity)
+            PrimaryButton(title: nextTitle, tint: accent) {
+                advance()
+            }
+        }
+        .padding(20)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .shadow(color: Color.black.opacity(0.25), radius: 18, x: 0, y: 8)
+    }
+
+    private var stepContent: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(current.emoji)
+                .font(.system(size: 36))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(current.title)
+                    .font(.title3.weight(.bold))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(current.text)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var stepDots: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<TutorialOverlay.steps.count, id: \.self) { index in
+                TutorialDot(active: index == step, accent: accent)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Step " + String(step + 1) + " of " + String(TutorialOverlay.steps.count))
+    }
+
+    private var skipButton: some View {
+        Button {
+            onFinish()
+        } label: {
+            Text("Skip")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func advance() {
+        if isLast {
+            onFinish()
+            return
+        }
+        Haptic.tap()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            step += 1
+        }
+    }
+}
+
+private struct TutorialDot: View {
+    let active: Bool
+    let accent: Color
+
+    private var fill: Color { active ? accent : Color.secondary.opacity(0.3) }
+    private var width: CGFloat { active ? 18 : 7 }
+
+    var body: some View {
+        Capsule()
+            .fill(fill)
+            .frame(width: width, height: 7)
     }
 }

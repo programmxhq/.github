@@ -100,11 +100,14 @@ struct StatRing: View {
                 .font(.subheadline.weight(.bold))
                 .monospacedDigit()
                 .foregroundStyle(valueColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .contentTransition(.numericText(value: Double(value)))
             Text(stat.label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .animation(.easeOut(duration: 0.6), value: value)
         .accessibilityElement(children: .ignore)
@@ -203,81 +206,58 @@ struct PrimaryButton: View {
 
 // MARK: - Card face
 
+/// The full card: emoji, title and body. Used for the opened card above its choices.
+/// `expanded: false` shows the one-line teaser instead of the full body.
 struct CardFace: View {
     let card: Card
     let expanded: Bool
-    var tint: Color = .accentColor
+    let tint: Color
 
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: expanded ? 26 : 20, style: .continuous)
+    init(card: Card, expanded: Bool, tint: Color = .accentColor) {
+        self.card = card
+        self.expanded = expanded
+        self.tint = tint
     }
 
-    private var hasGamble: Bool {
-        card.choices.contains { $0.odds != nil }
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 26, style: .continuous)
     }
 
     private var borderColor: Color {
         card.priority ? Color.red.opacity(0.8) : tint.opacity(0.28)
     }
 
-    private var fixedHeight: CGFloat? {
-        expanded ? nil : 176
+    private var borderWidth: CGFloat {
+        card.priority ? 2 : 1
+    }
+
+    private var bodyText: String {
+        expanded ? card.body : card.teaser
     }
 
     var body: some View {
         content
-            .padding(expanded ? 20 : 10)
+            .padding(20)
             .frame(maxWidth: .infinity)
-            .frame(height: fixedHeight)
             .background { cardBackground }
-            .overlay { shape.strokeBorder(borderColor, lineWidth: card.priority ? 2 : 1) }
-            .shadow(color: Color.black.opacity(0.14), radius: expanded ? 16 : 8, x: 0, y: expanded ? 8 : 4)
+            .overlay { shape.strokeBorder(borderColor, lineWidth: borderWidth) }
+            .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 8)
             .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder
     private var content: some View {
-        if expanded {
-            expandedContent
-        } else {
-            collapsedContent
-        }
-    }
-
-    private var collapsedContent: some View {
-        VStack(spacing: 6) {
-            Text(card.emoji)
-                .font(.system(size: 44))
-                .padding(.top, 6)
-            Text(card.title)
-                .font(.subheadline.weight(.bold))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.75)
-            Text(card.teaser)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .minimumScaleFactor(0.9)
-            Spacer(minLength: 0)
-            if hasGamble {
-                Text("🎲")
-                    .font(.caption)
-                    .opacity(0.8)
-            }
-        }
-        .foregroundStyle(Color.primary)
-    }
-
-    private var expandedContent: some View {
         VStack(spacing: 10) {
             Text(card.emoji)
                 .font(.system(size: 60))
+                .accessibilityHidden(true)
+            if card.priority {
+                UrgentTag()
+            }
             Text(card.title)
                 .font(.title2.weight(.bold))
                 .multilineTextAlignment(.center)
-            Text(card.body)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(bodyText)
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -295,5 +275,132 @@ struct CardFace: View {
                                startPoint: .top, endPoint: .bottom)
             )
         }
+    }
+}
+
+// MARK: - Card row
+
+/// One card in the hand: a full-width tappable row. Wrap it in a Button with `PressableStyle`.
+struct CardRow: View {
+    let card: Card
+    let tint: Color
+
+    @ScaledMetric(relativeTo: .title) private var tileSize: CGFloat = 54
+    @ScaledMetric(relativeTo: .title) private var emojiSize: CGFloat = 34
+
+    init(card: Card, tint: Color = .accentColor) {
+        self.card = card
+        self.tint = tint
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+    }
+
+    private var tileShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+    }
+
+    private var hasGamble: Bool {
+        card.choices.contains { $0.odds != nil }
+    }
+
+    private var borderColor: Color {
+        card.priority ? Color.red.opacity(0.55) : tint.opacity(0.22)
+    }
+
+    private var borderWidth: CGFloat {
+        card.priority ? 1.5 : 1
+    }
+
+    private var accessibilityText: String {
+        var parts: [String] = [card.title, card.teaser]
+        if card.priority { parts.append("Urgent") }
+        if hasGamble { parts.append("Has a gamble") }
+        return parts.joined(separator: ". ")
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            emojiTile
+            texts
+            trailing
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
+        .background { rowBackground }
+        .overlay { shape.strokeBorder(borderColor, lineWidth: borderWidth) }
+        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
+        .contentShape(shape)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+        .accessibilityHint("Opens the card to see its choices")
+    }
+
+    private var emojiTile: some View {
+        Text(card.emoji)
+            .font(.system(size: emojiSize))
+            .frame(width: tileSize, height: tileSize)
+            .background(tint.opacity(0.16), in: tileShape)
+    }
+
+    private var texts: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            if card.priority {
+                UrgentTag()
+            }
+            Text(card.title)
+                .font(.headline)
+                .foregroundStyle(Color.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(card.teaser)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var trailing: some View {
+        HStack(spacing: 8) {
+            if hasGamble {
+                Text("🎲")
+                    .font(.footnote)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.orange.opacity(0.15), in: Capsule())
+            }
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private var rowBackground: some View {
+        ZStack {
+            shape.fill(.regularMaterial)
+            shape.fill(
+                LinearGradient(colors: [tint.opacity(0.16), tint.opacity(0.03)],
+                               startPoint: .leading, endPoint: .trailing)
+            )
+        }
+    }
+}
+
+/// Small red "Urgent" label for priority cards.
+private struct UrgentTag: View {
+    var body: some View {
+        Text("Urgent")
+            .font(.caption2.weight(.bold))
+            .textCase(.uppercase)
+            .foregroundStyle(Color.red)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Color.red.opacity(0.13), in: Capsule())
     }
 }
