@@ -17,7 +17,7 @@ A small life-simulation game for iPhone, built with SwiftUI. No dependencies, no
 - **Daily challenge:** one seeded life per day, the same for every player. It sits outside your family line, and your best score for the day is saved.
 - **Share your epitaph:** the tombstone renders to an image you can share from the summary screen.
 
-A full run takes 5–10 minutes. The game saves automatically after every action.
+A full run takes 5–10 minutes. The game saves automatically after every action. A 3-step tutorial runs on your first life, and the **?** button on the Play screen reopens it.
 
 ## How it differs from BitLife
 
