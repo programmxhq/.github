@@ -36,7 +36,9 @@ Requirements: Xcode 16 or later, iOS 17 or later.
 1. Open `Dealt/Dealt.xcodeproj`.
 2. Choose your Team under *Signing & Capabilities* (bundle id `com.programmx.dealt`).
 3. Run on an iPhone or a simulator.
-4. Run the engine tests with ⌘U (scheme *Dealt*; tests live in `Dealt/DealtTests/`).
+4. Run the tests with ⌘U (scheme *Dealt*). `DealtTests/` holds the engine tests; `DealtUITests/` holds a UI smoke test that plays a whole life through the real screens.
+
+CI (`.github/workflows/dealt-ios.yml`) builds and runs both test targets on Xcode 16 / iOS 18 and Xcode 26 / iOS 26. Each run uploads the UI test's screenshots as an artifact.
 
 The project uses a synchronized folder, so any `.swift` file added to `Dealt/Dealt/` is compiled automatically.
 
@@ -56,6 +58,7 @@ The project uses a synchronized folder, so any `.swift` file added to `Dealt/Dea
 | `ContentCore.swift` | Trait and ambition tables, names, filler cards, keepsake cards |
 | `ContentEarly.swift` / `ContentBuild.swift` / `ContentLate.swift` / `ContentExtra.swift` | 167 cards across all stages, family events and 8 ambitions |
 | `DealtTests/DealtTests.swift` | 40 engine tests (Swift Testing), run with ⌘U |
+| `DealtUITests/DealtUITests.swift` | UI smoke test: start → tutorial → play until death → heirloom → next generation |
 
 `DESIGN.md` has the full design spec and the balance notes.
 

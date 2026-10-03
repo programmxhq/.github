@@ -88,6 +88,8 @@ final class DealtUITests: XCTestCase {
     }
 
     private func snapshot(_ name: String) {
+        // Let transitions and deal-in animations settle so the screenshot shows the final screen.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = name
         shot.lifetime = .keepAlways
