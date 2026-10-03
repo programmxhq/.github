@@ -207,13 +207,13 @@ struct ContentTests {
 
     @Test func everyAmbitionHasADefinition() {
         for ambition in Ambition.allCases {
-            #expect(AmbitionDef.all[ambition] != nil, "missing AmbitionDef for .\(ambition.rawValue)")
+            #expect(AmbitionDef.all.keys.contains(ambition), "missing AmbitionDef for .\(ambition.rawValue)")
         }
     }
 
     @Test func everyTraitHasADefinition() {
         for trait in Dealt.Trait.allCases {
-            #expect(TraitDef.all[trait] != nil, "missing TraitDef for .\(trait.rawValue)")
+            #expect(TraitDef.all.keys.contains(trait), "missing TraitDef for .\(trait.rawValue)")
         }
     }
 
@@ -464,7 +464,7 @@ struct DailyTests {
 
         store.finishDaily()
         #expect(store.phase == .start)
-        #expect(store.life == nil)
+        #expect(store.life.map { _ in true } == nil)
         #expect(store.hand.isEmpty)
         #expect(store.generation == 1)
         #expect(store.lineage.isEmpty)
@@ -628,7 +628,7 @@ struct HeirloomTests {
         #expect(store.lineage.count == 1)
         #expect(store.lineage.last?.heirloomPassed == pick)
         #expect(store.lineage.last?.kidNames == ["Ezra", "Nia"])
-        #expect(store.life == nil)
+        #expect(store.life.map { _ in true } == nil)
         #expect(["Ezra", "Nia"].contains(store.suggestedName))
 
         // The heir is born with the heirloom, and it is consumed.
