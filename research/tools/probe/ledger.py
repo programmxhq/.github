@@ -15,10 +15,16 @@ import time
 from pathlib import Path
 
 HARD_CAP_BYTES = 500_000_000  # project-wide hard cap; config can only lower it
+MIN_ABORT_MARGIN_BYTES = 1_000_000  # floor for budget.abort_margin_bytes (runner.abort_margin)
+CANONICAL_LEDGER = "research/probes/traffic_ledger.json"  # repo-relative; the CLI refuses any other
 
 
 class BudgetRefused(Exception):
     pass
+
+
+class LedgerBusy(BudgetRefused):
+    """Another proxied run or health check holds the run lock on this ledger."""
 
 
 def _now() -> str:
@@ -31,6 +37,23 @@ class Ledger:
         self.cap = min(int(cap_bytes), HARD_CAP_BYTES)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lockpath = self.path.with_suffix(self.path.suffix + ".lock")
+        self._runlockpath = self.path.with_suffix(self.path.suffix + ".run.lock")
+
+    @contextlib.contextmanager
+    def exclusive_run(self):
+        """Held for a whole proxied run. Per-request headroom (cap - used - margin) is only safe
+        if no other process spends from the same ledger at the same time, so a second concurrent
+        run or health check is refused instead of sharing that headroom."""
+        with open(self._runlockpath, "a+") as lf:
+            try:
+                fcntl.flock(lf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise LedgerBusy(f"another probe run or health check is using {self.path.name}; "
+                                 "run probes one at a time") from None
+            try:
+                yield
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
 
     @contextlib.contextmanager
     def _locked(self):
@@ -67,6 +90,8 @@ class Ledger:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, sort_keys=False)
             f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())  # never let a crash replace the ledger with an empty file
         os.replace(tmp, self.path)
 
     def init(self) -> None:

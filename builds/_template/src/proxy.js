@@ -33,6 +33,24 @@ function decodoCredentials(input) {
     };
 }
 
+/** Every credential that must never appear in logs / errors (Decodo user+pass, custom proxy URL passwords). */
+export function collectSecrets(input) {
+    const decodo = decodoCredentials(input);
+    const pc = input.proxyConfiguration ?? {};
+    return [decodo.password, decodo.username, ...(pc.proxyUrls ?? []).map((u) => safePassword(u))];
+}
+
+// Wraps Actor.createProxyConfiguration: its validation errors echo the full proxy URL, password included
+// (e.g. `Expected property string values to be a URL, got \`http://user:pass@bad host:1\``).
+async function configureProxy(options) {
+    try {
+        return await Actor.createProxyConfiguration(options);
+    } catch (err) {
+        if (!options.proxyUrls?.length) throw err;
+        throw new Error(`Invalid proxy URL(s): ${options.proxyUrls.map(redactProxyUrl).join(', ')}. Expected http://user:pass@host:port.`);
+    }
+}
+
 /**
  * Returns { proxyConfiguration, label, secrets }.
  * proxyConfiguration is undefined when running without a proxy.
@@ -41,7 +59,7 @@ export async function createProxy(input) {
     const decodo = decodoCredentials(input);
     const hasDecodo = Boolean(decodo.username && decodo.password && decodo.host);
     const pc = input.proxyConfiguration ?? {};
-    const secrets = [decodo.password, decodo.username, ...(pc.proxyUrls ?? []).map((u) => safePassword(u))];
+    const secrets = collectSecrets(input);
 
     let provider = input.proxyProvider;
     if (provider === 'auto') {
@@ -55,18 +73,21 @@ export async function createProxy(input) {
         if (!hasDecodo) {
             throw new Error('proxyProvider is "decodo" but DECODO_USER / DECODO_PASS / DECODO_HOST (or the input fields) are not all set.');
         }
+        if (!/^[^\s/:@]+:\d{1,5}$/.test(decodo.host)) {
+            throw new Error('DECODO_HOST (or decodoHost) must be "host:port" without a scheme or path, e.g. gate.example:7000.');
+        }
         const proxyUrl = `http://${encodeURIComponent(decodo.username)}:${encodeURIComponent(decodo.password)}@${decodo.host}`;
         // BUILDER: for sticky sessions, Decodo encodes the session in the username. If the source needs
         // one IP per crawlee session, replace proxyUrls with:
         //   newUrlFunction: (sessionId) => `http://${user}-session-${sessionId}:${pass}@${host}`
         // UNVERIFIED: check the exact username syntax in Decodo's docs before relying on it.
-        const proxyConfiguration = await Actor.createProxyConfiguration({ proxyUrls: [proxyUrl] });
+        const proxyConfiguration = await configureProxy({ proxyUrls: [proxyUrl] });
         return { proxyConfiguration, label: `Decodo ${redactProxyUrl(proxyUrl)}`, secrets };
     }
 
     if (provider === 'custom') {
         if (!pc.proxyUrls?.length) throw new Error('proxyProvider is "custom" but proxyConfiguration.proxyUrls is empty.');
-        const proxyConfiguration = await Actor.createProxyConfiguration({ proxyUrls: pc.proxyUrls });
+        const proxyConfiguration = await configureProxy({ proxyUrls: pc.proxyUrls });
         return { proxyConfiguration, label: `custom ${pc.proxyUrls.map(redactProxyUrl).join(', ')}`, secrets };
     }
 

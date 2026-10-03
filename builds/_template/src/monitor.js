@@ -19,8 +19,25 @@ export function fingerprint(record, volatileFields) {
     return createHash('sha1').update(JSON.stringify(stable)).digest('hex').slice(0, 16);
 }
 
+// Template inputs that do NOT change which items a run returns. Any OTHER input field (e.g. a `query` or
+// `country` a builder adds) becomes part of the default key, so different searches never share a seen-set.
+const NON_KEY_FIELDS = new Set([
+    'startUrls', 'ids', 'maxItems', 'monitoringMode', 'monitoringKey', 'since', 'sinceDate',
+    'proxyProvider', 'proxyConfiguration', 'decodoUsername', 'decodoPassword', 'decodoHost',
+    'skipProxyHealthCheck', 'proxyHealthCheckUrl', 'maxRequestRetries', 'backoffBaseMillis',
+    'maxConcurrency', 'requestTimeoutSecs', 'pushBatchSize',
+]);
+
 export function defaultMonitoringKey(input) {
-    const basis = JSON.stringify({ u: input.startUrls.map((s) => s.url ?? s).sort(), i: [...input.ids].sort() });
+    const extra = Object.keys(input)
+        .filter((k) => !NON_KEY_FIELDS.has(k) && input[k] !== undefined)
+        .sort()
+        .map((k) => [k, input[k]]);
+    const basis = JSON.stringify({
+        u: input.startUrls.map((s) => s.url ?? s).sort(),
+        i: [...input.ids].sort(),
+        ...(extra.length ? { x: extra } : {}), // omitted when empty: keeps keys of template-only inputs unchanged
+    });
     return `seen-${createHash('sha1').update(basis).digest('hex').slice(0, 12)}`;
 }
 

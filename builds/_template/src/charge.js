@@ -17,7 +17,12 @@
 //   - pushData's returned chargedCount SUMS all charged events (custom + synthetic), so it is not an
 //     item count. We count saved items as the delta of getChargedEventCount(CHARGE_EVENT).
 //   - When the budget cannot cover one more item, the SDK still pushes+charges ONE item so the
-//     platform notices and kills the run; we stop at the first eventChargeLimitReached to avoid that.
+//     platform notices and kills the run (charging.js calculatePushDataLimits). We stop at the first
+//     eventChargeLimitReached AND check the remaining budget before every push, so this never fires
+//     (the pre-check matters when the budget is already exhausted before the first item).
+//   - pushDataAndCharge pushes FIRST, then charges. If the charge API call throws, the items are in
+//     the dataset but may be unbilled. Any flush failure stops the crawl, drops later items and fails
+//     the run (main.js), instead of being swallowed and silently continuing.
 import { Actor, log } from 'apify';
 
 // BUILDER: event name must match the event configured in Console (see .actor/pay_per_event.json).
@@ -34,6 +39,7 @@ export class ResultSink {
         this.stopped = false;
         this.stats = { received: 0, skippedOld: 0, skippedUnchanged: 0, skippedDuplicate: 0, saved: 0, dropped: 0 };
         this.stopReason = null;
+        this.flushError = null;
         this.idsThisRun = new Set();
     }
 
@@ -61,6 +67,10 @@ export class ResultSink {
             if (this.stopped) {
                 this.stats.dropped++;
                 continue;
+            }
+            if (record?.id === undefined || record.id === null || record.id === '') {
+                // Without a stable id every record collapses into one ("undefined") and monitoring breaks.
+                throw new Error(`Record has no "id" (check the selectors in routes.js): ${JSON.stringify(record).slice(0, 200)}`);
             }
             const id = String(record.id);
             if (this.idsThisRun.has(id)) {
@@ -90,7 +100,14 @@ export class ResultSink {
 
     /** Save buffered records. Safe to call concurrently and from event handlers. */
     flush() {
-        this.chain = this.chain.then(() => this.#flushNow()).catch((err) => log.exception(err, 'Flush failed'));
+        this.chain = this.chain
+            .then(() => this.#flushNow())
+            .catch((err) => {
+                // Pushed-but-not-charged (or lost) items must not go unnoticed: stop and fail the run.
+                this.flushError ??= err;
+                log.exception(err, 'Saving results failed; stopping the crawl');
+                this.stop(`save failed: ${err?.message ?? err}`);
+            });
         return this.chain;
     }
 
@@ -102,13 +119,20 @@ export class ResultSink {
             this.stats.dropped += Math.max(0, batch.length - room);
             batch = batch.slice(0, room);
         }
-        if (this.stopReason?.startsWith('charge limit')) {
+        if (this.flushError || this.stopReason?.startsWith('charge limit')) {
             this.stats.dropped += batch.length;
             return;
         }
         if (batch.length === 0) return;
 
         const countEvent = CHARGE_EVENT ?? SYNTHETIC_ITEM_EVENT;
+        // Budget already exhausted: pushing now would make the SDK push + charge one item OVER the
+        // user's limit (overcharge-by-one). Stop instead.
+        if (this.isPpe && this.cm.calculateMaxEventChargeCountWithinLimit(countEvent) <= 0) {
+            this.stats.dropped += batch.length;
+            this.stop(`charge limit reached (maxTotalChargeUsd=${this.cm.getMaxTotalChargeUsd()})`);
+            return;
+        }
         const before = this.cm.getChargedEventCount(countEvent);
         const res = CHARGE_EVENT ? await Actor.pushData(batch, CHARGE_EVENT) : await Actor.pushData(batch);
         const saved = this.isPpe ? this.cm.getChargedEventCount(countEvent) - before : batch.length;

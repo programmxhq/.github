@@ -1,9 +1,10 @@
 // End-to-end tests: run the real Actor (node src/main.js) offline against a local mock site and a
 // local authenticating forward proxy that stands in for Decodo. Run with `npm test`.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { after, before, describe, test } from 'node:test';
 
-import { fingerprint } from '../src/monitor.js';
+import { defaultMonitoringKey, fingerprint } from '../src/monitor.js';
 import { parseSince } from '../src/input.js';
 import { redactProxyUrl, scrubSecrets } from '../src/proxy.js';
 import { startMockServer } from './fixtures/mock-server.js';
@@ -113,6 +114,22 @@ describe('pay-per-event limit', () => {
         assert.equal(summary.saved, 3);
         assert.match(run.output, /Stopping crawl: charge limit reached/);
     });
+
+    // Review fix: with a budget below one item's price the SDK used to push + charge 1 item anyway
+    // (overcharge-by-one, charging.js calculatePushDataLimits). The sink now checks the budget first.
+    test('budget below one item price: nothing pushed, nothing charged', async () => {
+        mock.state.version = 2;
+        const storageDir = makeStorageDir('limit0');
+        const run = await runActor({
+            storageDir,
+            input: baseInput({ skipProxyHealthCheck: true }),
+            env: { SOURCE_BASE_URL: mock.url, ...PPE_ENV, ACTOR_MAX_TOTAL_CHARGE_USD: '0.5' },
+        });
+        assert.equal(run.code, 0, run.output);
+        assert.equal(readDataset(storageDir).length, 0);
+        assert.equal(chargeTotals(storageDir).result ?? 0, 0, 'never charge past maxTotalChargeUsd');
+        assert.equal(readKv(storageDir, 'RUN_SUMMARY').chargeLimitReached, true);
+    });
 });
 
 describe('plain local run (no PPE env)', () => {
@@ -134,6 +151,22 @@ describe('plain local run (no PPE env)', () => {
         assert.equal(readKv(storageDir, 'RUN_SUMMARY').saved, 2);
         assert.match(run.output, /Proxy health check skipped: running without a proxy/);
         assert.equal(readKv(storageDir, 'RUN_SUMMARY').stopReason, 'maxItems (2) reached');
+    });
+
+    // Review fix: KV getValue() accepts any key but setValue() rejects invalid ones, so a bad key used to
+    // fail only at the end, after charging, and never persist the seen-set (every run re-charged everything).
+    test('invalid monitoringKey fails before crawling or charging', async () => {
+        const storageDir = makeStorageDir('badkey');
+        mock.resetHits();
+        const run = await runActor({
+            storageDir,
+            input: baseInput({ monitoringMode: 'new', monitoringKey: 'my shop/daily', skipProxyHealthCheck: true }),
+            env: { SOURCE_BASE_URL: mock.url, ...PPE_ENV },
+        });
+        assert.notEqual(run.code, 0);
+        assert.match(run.output, /Invalid monitoringKey/);
+        assert.equal(mock.state.hits['/api/items'], undefined, 'crawl never started');
+        assert.equal(chargeTotals(storageDir).result ?? 0, 0);
     });
 
     test('since filter skips old items', async () => {
@@ -164,6 +197,29 @@ describe('proxy health check', () => {
         assert.notEqual(run.code, 0);
         assert.match(run.output, /DECODO_USER \/ DECODO_PASS \/ DECODO_HOST/);
     });
+
+    // Review fix: crawlee's proxyUrls validation error echoes the whole URL, password included, and it was
+    // thrown before main.js knew the secrets, so it reached the log and the run status message unscrubbed.
+    test('malformed Decodo host or custom proxy URL never prints the password', async () => {
+        const leaky = 'L3aky-Pa55word';
+        const run1 = await runActor({
+            storageDir: makeStorageDir('badhost'),
+            input: baseInput(),
+            env: { SOURCE_BASE_URL: mock.url, DECODO_USER: PROXY_USER, DECODO_PASS: leaky, DECODO_HOST: 'gate example:7000' },
+        });
+        assert.notEqual(run1.code, 0);
+        assert.match(run1.output, /DECODO_HOST \(or decodoHost\) must be "host:port"/);
+        assert.ok(!run1.output.includes(leaky), run1.output);
+
+        const run2 = await runActor({
+            storageDir: makeStorageDir('badcustom'),
+            input: baseInput({ proxyProvider: 'custom', proxyConfiguration: { proxyUrls: [`http://someone:${leaky}@bad host:1`] } }),
+            env: { SOURCE_BASE_URL: mock.url },
+        });
+        assert.notEqual(run2.code, 0);
+        assert.match(run2.output, /Invalid proxy URL\(s\)/);
+        assert.ok(!run2.output.includes(leaky), run2.output);
+    });
 });
 
 describe('unit', () => {
@@ -183,5 +239,14 @@ describe('unit', () => {
         const b = fingerprint({ price: 2, id: '1', scrapedAt: 'y' }, ['scrapedAt']);
         assert.equal(a, b);
         assert.notEqual(a, fingerprint({ id: '1', price: 3 }, ['scrapedAt']));
+    });
+    // Review fix: builder-added inputs (query, country...) must separate monitoring memories.
+    test('default monitoring key covers builder-added inputs, ignores run settings', () => {
+        const base = { startUrls: [{ url: 'https://x/1' }], ids: [], maxItems: 10, proxyProvider: 'auto' };
+        const legacy = createHash('sha1').update(JSON.stringify({ u: ['https://x/1'], i: [] })).digest('hex').slice(0, 12);
+        assert.equal(defaultMonitoringKey(base), `seen-${legacy}`, 'template-only inputs keep the original key');
+        assert.equal(defaultMonitoringKey(base), defaultMonitoringKey({ ...base, maxItems: 99, decodoPassword: 'x' }));
+        assert.notEqual(defaultMonitoringKey({ ...base, query: 'shoes' }), defaultMonitoringKey({ ...base, query: 'hats' }));
+        assert.notEqual(defaultMonitoringKey({ ...base, query: 'shoes' }), defaultMonitoringKey(base));
     });
 });

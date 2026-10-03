@@ -7,7 +7,7 @@ import { Actor, log } from 'apify';
 import { ResultSink } from './charge.js';
 import { normalizeInput } from './input.js';
 import { defaultMonitoringKey, MonitorState } from './monitor.js';
-import { createProxy, proxyHealthCheck, scrubSecrets } from './proxy.js';
+import { collectSecrets, createProxy, proxyHealthCheck, scrubSecrets } from './proxy.js';
 import { buildStartRequests, createRouter, detectBlock, getRecordDate, SOURCE_NAME, VOLATILE_FIELDS } from './routes.js';
 
 const MAX_BACKOFF_MS = 30_000;
@@ -19,8 +19,8 @@ try {
     const input = normalizeInput(await Actor.getInput());
 
     // --- Proxy + fail-fast health check -------------------------------------------------
+    secrets = collectSecrets(input); // before createProxy, so its errors are scrubbed too
     const proxy = await createProxy(input);
-    secrets = proxy.secrets;
     log.info(`Proxy: ${proxy.label}`);
     if (!input.skipProxyHealthCheck) await proxyHealthCheck(proxy, input.proxyHealthCheckUrl);
 
@@ -115,6 +115,7 @@ try {
     };
     await Actor.setValue('RUN_SUMMARY', summary);
     log.info('Run summary', summary);
+    if (sink.flushError) throw new Error(`Saving results failed, run stopped early: ${sink.flushError.message ?? sink.flushError}`);
     await Actor.setStatusMessage(
         `Saved ${summary.saved} items` +
             (summary.skippedUnchanged ? `, ${summary.skippedUnchanged} unchanged skipped` : '') +

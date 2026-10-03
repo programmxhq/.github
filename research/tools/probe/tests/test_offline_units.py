@@ -143,3 +143,44 @@ def test_sticky_username_and_redaction():
     tok = base64.b64encode(b"bobUser:hunter2pass").decode()
     out = r.redact(f"failed for bobUser with hunter2pass Proxy-Authorization: Basic {tok} http://a:b@h/")
     assert "bobUser" not in out and "hunter2pass" not in out and tok not in out and "a:b@" not in out
+
+
+# ---------------------------------------------------------------- review regressions (review-agent:probe)
+
+def test_cloudflare_jsd_on_normal_page_is_antibot_not_challenge():
+    f = fp(200, [("Server", "cloudflare"), ("CF-RAY", "x")], S.CF_JSD_NORMAL)
+    assert not f.has("challenge") and "cloudflare" in f.vendors({"antibot"})
+    # a 200 page that fails the predicate is "empty" (soft block / drift), not a hard "challenge"
+    assert C.classify(error_kind=None, status=200, fp=f, rows=0, success=False) == "empty"
+    real = fp(403, [], b"<script src='/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=1'></script>")
+    assert real.has("challenge")
+
+
+def test_cloudflare_5xx_edge_error_is_server_error_not_block():
+    f = fp(522, [("Server", "cloudflare"), ("CF-RAY", "x")], S.CF_522)
+    assert not f.has("block") and f.vendors({"antibot", "challenge", "block"}) == []
+    assert C.classify(error_kind=None, status=522, fp=f, rows=0, success=False) == "server_error"
+    deny = fp(403, [("Server", "cloudflare")], b"<div id='cf-error-details'>Error 1020 Access denied</div>")
+    assert C.classify(error_kind=None, status=403, fp=deny, rows=0, success=False) == "block_page"
+
+
+def test_fetch_never_raises_on_bad_url():
+    from probe.wire import fetch
+    for u in ("http://127.0.0.1:99999/x", "ftp://example.com/", "http:///nohost"):
+        r = fetch(u, timeout=1)
+        assert r.error_kind == "invalid" and r.wire_total == 0, (u, r.error)
+
+
+def test_sticky_basic_token_is_redacted(creds):
+    from probe.creds import REDACTOR
+    from probe.runner import proxy_for
+    ps = proxy_for(creds, "abc123", 30)
+    tok = ps.auth_header().split()[1]
+    assert tok not in REDACTOR.redact(f"echo {tok}")
+
+
+def test_host_is_redacted(tmp_path):
+    from probe.creds import REDACTOR
+    load_credentials(env={"DECODO_USER": "hU", "DECODO_PASS": "hPass77", "DECODO_HOST": "gw.example-proxy.test:7000"},
+                     dotenv_path=tmp_path / "none")
+    assert "gw.example-proxy.test" not in REDACTOR.redact("connect timeout to gw.example-proxy.test:7000")

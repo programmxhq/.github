@@ -8,7 +8,7 @@
 
 | Area | State | Evidence |
 |---|---|---|
-| Local tests (`npm test`, offline mock) | TODO pass/fail | TODO paste summary line, e.g. `# pass 11 # fail 0` x3 |
+| Local tests (`npm test`, offline mock) | TODO pass/fail | TODO paste summary line, e.g. `# pass 17 # fail 0` x3 |
 | Schemas (`apify validate-schema`) | TODO | TODO |
 | Live site scrape (real target) | UNVERIFIED | Egress blocked in build env / TODO |
 | Decodo proxy against real gateway | UNVERIFIED | Only the local proxy stub was tested |

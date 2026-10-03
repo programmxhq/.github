@@ -15,6 +15,7 @@ budget:
   min_reserve_bytes: 65536
   # Headroom kept below the cap (and below per_probe_max_bytes) for bytes the gateway sends
   # after we abort a request (in flight / in its buffers; invisible to the client).
+  # Code floor: runner.abort_margin() never uses less than 1 MB, so lowering this does nothing.
   abort_margin_bytes: 1000000
 
 requests:
@@ -67,7 +68,7 @@ pricing:
     - https://www.xpay.sh/saas-pricing/smartproxy/            # PAYG $4/GB (third party)
 
 verdict:
-  max_block_rate: 0.20          # KILL if (challenge+captcha+block+empty)/sent exceeds this
+  max_block_rate: 0.20          # KILL if (challenge+captcha+block+empty)/responses (errors excluded) exceeds this
   max_cost_per_1k_rows_usd: 0.50
   max_error_rate: 0.30          # KILL if proxy/network errors exceed this (unmeasurable)
   min_requests_for_verdict: 20  # fewer completed (e.g. stopped at cap) -> INCOMPLETE

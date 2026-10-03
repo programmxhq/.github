@@ -12,11 +12,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from .creds import REDACTOR, load_credentials
 from .definition import DefinitionError, load_definition
-from .ledger import BudgetRefused, Ledger
+from .ledger import CANONICAL_LEDGER, BudgetRefused, Ledger
 from .runner import (ProbeAbort, cfg_path, health_check, load_config, plan, run_probe,
                      upstream_from_arg, write_probes_md)
 
@@ -27,7 +28,7 @@ def _creds_or_die():
         print("error: Decodo credentials missing. Set DECODO_USER, DECODO_PASS, DECODO_HOST "
               "(host may include :port) in env or repo-root .env", file=sys.stderr)
         sys.exit(2)
-    print(f"[creds] loaded from {creds.source}; gateway {creds.host}:{creds.port}")
+    print(f"[creds] loaded from {creds.source}; gateway port {creds.port}")  # host, user, pass never printed
     return creds
 
 
@@ -54,6 +55,13 @@ def main(argv=None) -> int:
     sub.add_parser("report")
     a = ap.parse_args(argv)
     cfg = load_config(a.config)
+    # The 500 MB cap lives in one ledger. A --config pointing at another ledger file would start
+    # from zero, so it is refused unless explicitly allowed (the offline tests use a temp ledger).
+    if cfg_path(cfg, "ledger").resolve() != cfg_path({"paths": {"ledger": CANONICAL_LEDGER}}, "ledger").resolve() \
+            and os.environ.get("PROBE_ALLOW_ALT_LEDGER") != "1":
+        print(f"error: config ledger path must be {CANONICAL_LEDGER} (the project-wide Decodo cap). "
+              "Set PROBE_ALLOW_ALT_LEDGER=1 only for offline tests.", file=sys.stderr)
+        return 2
     try:
         if a.cmd == "health":
             creds = _creds_or_die()

@@ -40,8 +40,9 @@
         "monitoringKey": {
             "title": "Monitoring key",
             "type": "string",
-            "description": "Name for the memory of seen items. Runs with the same key share it. Leave empty to derive it from the start URLs and IDs.",
-            "editor": "textfield"
+            "description": "Name for the memory of seen items. Runs with the same key share it. Leave empty to derive it from the input. Letters, digits and ! - _ . ' ( ) only.",
+            "editor": "textfield",
+            "pattern": "^[a-zA-Z0-9!\\-_.'()]{1,256}$"
         },
         "since": {
             "title": "Only items updated since",

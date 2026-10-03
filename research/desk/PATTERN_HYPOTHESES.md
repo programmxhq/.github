@@ -73,7 +73,7 @@ Confirm if: multi-market share in top quartile >= bottom + 20 points AND generic
 
 ## H10. Monitoring/scheduling fit: actors whose title or README promises "new since last run", "alerts", "monitor", "price drop", "only charges for new items" have higher `runs_30d / users_30d` (runs per user) than batch scrapers, and higher retention (users_30d / users_total).
 
-Prior: multiple monitor-mode actors exist (Rightmove alerts, OLX PK watchlist, Gazette monitor, Gumroad price-drop, generic restock monitor) and advertise hourly schedules + webhooks.
+Prior: multiple monitor-mode actors exist (Rightmove alerts, OLX PK watchlist, Gazette monitor, Gumroad price-drop, generic restock monitor) and advertise hourly schedules + webhooks. REVIEW 2026-10-03: the review re-search found 15+ more (Vinted x4, Marktplaats x3, Kleinanzeigen x3, Wallapop, SpareRoom, Argos stock, Shopify x4, Tadawul), several priced per *new listing* at $2.45-$7/1k vs $0.40-$1/1k for batch scrapers of the same source. H10 now has a large enough sample to test in Phase 3, and a price-premium sub-test (monitor $/1k vs batch $/1k within peer set) should be added.
 Test: `monitor_mode_claimed` vs `runs_per_user_30d` and `retention_proxy = users_30d / users_total`. Also `input_has_schedule_hint` (README mentions schedule/webhook).
 Confirm if: monitor actors' median runs_per_user >= 2x batch actors' AND retention_proxy higher. Kill if: no difference (then monitor shape is marketing, not usage).
 Decision use: this is the hypothesis behind the user's "repeat usage shape" criterion and should be tested first; if it fails, re-weight CANDIDATES.md.

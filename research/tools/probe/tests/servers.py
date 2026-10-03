@@ -61,6 +61,16 @@ NORMAL_HTML = b"""<!doctype html><html><head><title>Products</title>
 </body></html>"""
 
 
+CF_522 = b"""<!DOCTYPE html><html><head><title>example.com | 522: Connection timed out</title></head>
+<body><div id="cf-wrapper"><div id="cf-error-details" class="cf-error-details-wrapper">
+<h1>Connection timed out</h1><span>Error code 522</span></div></div></body></html>"""
+
+CF_JSD_NORMAL = b"""<html><body><div class="item"><h2>Alpha</h2></div>
+<script>(function(){var a=document.createElement('script');
+a.src='/cdn-cgi/challenge-platform/h/g/scripts/jsd/e4025c85ea63/main.js';document.body.appendChild(a)})();</script>
+</body></html>"""
+
+
 def items_json(page: int, n: int = 10) -> bytes:
     items = [{"id": page * 100 + i, "title": f"Item {page}-{i}", "price": 9.99 + i,
               "description": "lorem ipsum dolor sit amet " * 8} for i in range(n)]
@@ -138,6 +148,10 @@ class FixtureHandler(BaseHTTPRequestHandler):
             return self._send(202, AWS_WAF_202, [("x-amzn-waf-action", "challenge")])
         if path == "/redirect":
             return self._send(302, b"", [("Location", f"/api/items?page={page}")])
+        if path == "/redirect-bad":  # hostile Location: port out of range
+            return self._send(302, b"", [("Location", "http://127.0.0.1:99999/x")])
+        if path == "/cf-origin-down":  # Cloudflare 522 edge error page: origin outage, not a block
+            return self._send(522, CF_522, [("Server", "cloudflare"), ("CF-RAY", "8f03-LHR")])
         if path == "/slow":
             time.sleep(3)
             return self._send(200, items_json(1), ctype=J)

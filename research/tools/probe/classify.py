@@ -20,6 +20,9 @@ so treat individual markers as UNVERIFIED until seen in live probe data):
   [S7] Medium (dimakynal), "Hidden Fingerprints of Bot Protection" (Fastly x-served-by, x-timer,
        x-fastly-request-id; Shape x-sh-pointer):
        https://medium.com/@dimakynal/the-hidden-fingerprints-of-bot-protection-how-every-major-vendor-leaves-traces-in-your-browser-ae951e355606
+  [S9] Cloudflare JavaScript Detections docs + a live jsd path (.../challenge-platform/h/g/scripts/jsd/<hash>/main.js):
+       https://developers.cloudflare.com/cloudflare-challenges/challenge-types/javascript-detections/
+       https://any.run/report/a130dfc60f9a47919850139e8092ce158e7e41543d157d51f740ee336abb0b68/e8498b49-e5ff-4b79-96a7-00da1fcc2aa9
   [S8] Cloudflare Turnstile / hCaptcha / reCAPTCHA embed URLs (public widget docs; well known script hosts).
 
 Kinds:
@@ -42,7 +45,8 @@ BODY_SCAN_LIMIT = 400_000
 
 # (vendor, kind, location, matcher, label, source)
 # location: "header" (name present), "header_value" (name, regex on value),
-#           "cookie" (regex on cookie name), "body" (case-insensitive substring)
+#           "cookie" (regex on cookie name), "body" (case-insensitive substring),
+#           "body_re" (regex on the lower-cased body)
 RULES: list[tuple] = [
     # --- Cloudflare [S1][S2][S4]
     ("cloudflare", "cdn", "header", "cf-ray", "cf-ray header", "S4"),
@@ -52,9 +56,13 @@ RULES: list[tuple] = [
     ("cloudflare", "antibot", "cookie", r"^cf_clearance$", "cf_clearance cookie", "S2"),
     ("cloudflare", "challenge", "body", "<title>just a moment", "'Just a moment...' interstitial", "S2"),
     ("cloudflare", "challenge", "body", "_cf_chl_opt", "_cf_chl_opt challenge namespace", "S2"),
-    ("cloudflare", "challenge", "body", "/cdn-cgi/challenge-platform/h/", "challenge-platform orchestrate", "S2"),
-    # main.js "jsd" detections are injected into NORMAL pages on BM zones -> antibot, not challenge
-    ("cloudflare", "antibot", "body", "/cdn-cgi/challenge-platform/scripts/jsd", "challenge-platform JSD script", "S2"),
+    # Only the orchestrate path is a challenge. Normal pages on Bot Fight Mode / BM zones carry the
+    # JSD script, now also under /h/<x>/ (e.g. /cdn-cgi/challenge-platform/h/g/scripts/jsd/<hash>/main.js),
+    # so a bare "/challenge-platform/h/" match would call ordinary pages challenges. [S2][S9]
+    ("cloudflare", "challenge", "body_re", r"/cdn-cgi/challenge-platform/(?:h/[a-z]/)?orchestrate/",
+     "challenge-platform orchestrate", "S2"),
+    ("cloudflare", "antibot", "body_re", r"/cdn-cgi/challenge-platform/(?:h/[a-z]/)?scripts/jsd/",
+     "challenge-platform JSD script", "S9"),
     ("cloudflare", "block", "body", "attention required! | cloudflare", "Cloudflare 'Attention Required' block", "S4"),
     ("cloudflare", "block", "body", "cf-error-details", "Cloudflare error page", "S4"),
     ("cloudflare", "captcha", "body", "challenges.cloudflare.com/turnstile", "Turnstile widget", "S8"),
@@ -118,6 +126,9 @@ RULES: list[tuple] = [
     ("arkose", "captcha", "body", "arkoselabs.com", "Arkose/FunCaptcha", "S8"),
     ("geetest", "captcha", "body", "geetest", "GeeTest", "S8"),
 ]
+
+# Generic edge error-page markers: a block on 4xx, an origin/edge outage on 5xx.
+EDGE_ERROR_LABELS = {"Cloudflare error page", "Akamai 'Access Denied' reference"}
 
 BLOCK_STATUSES = {401, 403, 405, 406, 418, 429, 451, 503}  # 503 counted only with vendor evidence
 BLOCK_OUTCOMES = {"challenge", "captcha", "blocked_status", "block_page", "empty"}
@@ -185,6 +196,12 @@ def fingerprint(status: int | None, headers: list[tuple[str, str]], body: bytes)
             hit = any(re.match(matcher, c) for c in cookies)
         elif loc == "body":
             hit = bool(text) and matcher in text
+        elif loc == "body_re":
+            hit = bool(text) and re.search(matcher, text) is not None
+        if hit and kind == "block" and label in EDGE_ERROR_LABELS and status is not None and status >= 500:
+            # Cloudflare 52x / Akamai 5xx edge error pages share the markup of their deny pages.
+            # An origin outage is not a bot block: record CDN presence only.
+            kind, label = "cdn", f"{label} on HTTP {status} (edge error, not a block)"
         if hit and (vendor, kind, label) not in seen:
             seen.add((vendor, kind, label))
             signals.append({"vendor": vendor, "kind": kind, "label": label, "source": src})

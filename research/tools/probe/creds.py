@@ -132,6 +132,7 @@ def load_credentials(env: dict[str, str] | None = None, dotenv_path: Path | None
     host, port = parse_host(vals["DECODO_HOST"])  # type: ignore[arg-type]
     creds = Credentials(user=vals["DECODO_USER"], password=vals["DECODO_PASS"], host=host, port=port, source=source)  # type: ignore[arg-type]
     REDACTOR.add(creds.user, creds.password)
+    REDACTOR.add(creds.host)  # DECODO_HOST is treated as secret too (it lands in connect errors)
     return creds
 
 

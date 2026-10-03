@@ -276,7 +276,7 @@ class FetchResult:
     elapsed_ms: float = 0.0
     ttfb_ms: float | None = None
     error: str | None = None
-    error_kind: str | None = None  # connect|timeout|proxy_auth|proxy_error|tls|byte_limit|protocol|other
+    error_kind: str | None = None  # connect|timeout|proxy_auth|proxy_error|tls|byte_limit|protocol|invalid|interrupted|other
     proxy_status: int | None = None
     unread_drained_bytes: int = 0  # billed bytes counted from the kernel buffer after an early abort
 
@@ -373,19 +373,29 @@ def fetch(
     ca_file: str | None = None,
     rcvbuf: int | None = DEFAULT_PROXY_RCVBUF,
 ) -> FetchResult:
-    """One request on one fresh connection. Never raises; errors land in FetchResult.error."""
-    parts = urlsplit(url)
-    scheme = parts.scheme.lower()
-    host = parts.hostname or ""
-    port = parts.port or (443 if scheme == "https" else 80)
-    path = parts.path or "/"
-    if parts.query:
-        path += "?" + parts.query
+    """One request on one fresh connection. Never raises; errors land in FetchResult.error.
+
+    Ctrl-C during the request is caught so the bytes already on the wire are still returned
+    (error_kind "interrupted"); the caller records them and then re-raises KeyboardInterrupt.
+    """
     res = FetchResult(url=url)
     c = Counter(limit=byte_limit, deadline=time.monotonic() + timeout)
     t0 = time.monotonic()
     raw: CountingSocket | None = None
     try:
+        # Parsed inside the try: a hostile redirect Location (bad port, odd scheme) must become a
+        # recorded error, not an exception that loses the earlier hops' billed bytes.
+        parts = urlsplit(url)
+        scheme = parts.scheme.lower()
+        if scheme not in ("http", "https"):
+            raise ValueError(f"unsupported URL scheme {scheme!r}")
+        host = parts.hostname or ""
+        if not host:
+            raise ValueError("URL has no host")
+        port = parts.port or (443 if scheme == "https" else 80)
+        path = parts.path or "/"
+        if parts.query:
+            path += "?" + parts.query
         hop_host, hop_port = (upstream.host, upstream.port) if upstream else (
             (proxy.host, proxy.port) if proxy else (host, port))
         sock = _open_socket(hop_host, hop_port, timeout, rcvbuf if (proxy or upstream) else None)
@@ -464,11 +474,15 @@ def fetch(
         res.error, res.error_kind = f"protocol: {type(e).__name__}: {e}", "protocol"
     except (ConnectionError, OSError) as e:
         res.error, res.error_kind = f"connect: {type(e).__name__}: {e}", "connect"
+    except ValueError as e:
+        res.error, res.error_kind = f"invalid url or request: {e}", "invalid"
     except Exception as e:  # pragma: no cover - last resort, keep the run alive
         res.error, res.error_kind = f"{type(e).__name__}: {e}", "other"
+    except KeyboardInterrupt:
+        res.error, res.error_kind = "interrupted", "interrupted"
     finally:
         if raw is not None:
-            early = res.truncated or res.error_kind in ("byte_limit", "timeout", "protocol", "tls", "other")
+            early = res.truncated or res.error_kind in ("byte_limit", "timeout", "protocol", "tls", "other", "invalid", "interrupted")
             # Always count stragglers already in the kernel buffer (they were transmitted and billed).
             drained = _drain_buffered(raw.sock)
             c.wire_recv += drained

@@ -14,6 +14,8 @@ Status: **UNVERIFIED.** Found via WebSearch on 2026-10-03; apify.com was not rea
 | Run success | ">99% runs succeeded" | same |
 | Positioning line | "builds focused data actors — B2B contact and marketplace data from public EU/UK sources"; "public data only, no logins, no account data, no private-seller data; fields the source doesn't publish come back null" | same |
 
+> REVIEW (review-agent:desk, 2026-10-03): re-searched. Profile page title "Yasir Azeem (programmx) · Apify" and the positioning line re-confirmed (https://apify.com/programmx). Three of the four slugs re-surfaced with pricing not captured below: `ebay-business-leads` (https://apify.com/programmx/ebay-business-leads), `immoscout24-agent-leads` ("from $30.00 per 1,000 agency verified emails", https://apify.com/programmx/immoscout24-agent-leads/api), `propertyfinder-deal-scraper` ("from $150.00 per 1,000 deal scores", https://apify.com/programmx/propertyfinder-deal-scraper/api). `instantly-lead-pusher` did not re-surface in two searches; the URLs in row 3 came from the desk run only, so treat its existence as weaker UNVERIFIED. The "9 total / 5 monthly users, joined Nov 2023, >99%" figures did not re-surface this run and remain single-snippet UNVERIFIED. All prices are search-snippet values, UNVERIFIED.
+
 ## Actors found (exclude these from the candidate list)
 
 | # | Actor (slug) | What it is, per snippet | URLs seen |

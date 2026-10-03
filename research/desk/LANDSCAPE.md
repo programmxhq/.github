@@ -12,7 +12,7 @@ Egress to apify.com / api.apify.com was blocked for this run, so Apify's own pag
 | Actors in Store (public Store API count) | 57,363 | https://apify.com/khadinakbar/apify-store-scraper (actor README via snippet) | undated | UNVERIFIED |
 | Actors / publishers (independent daily census) | 42,715 actors, 2,148 publishers | https://apifystats.com/stats.html | undated snapshot ("daily") | UNVERIFIED |
 | Actors in Store, early 2026 | "21,000+" | https://use-apify.com/docs/what-is-apify/apify-actors | "early 2026" | UNVERIFIED |
-| Share of actors under 1 year old | 93.5%; 36,256 created in 2026 so far | https://apifystats.com/stats.html | undated | UNVERIFIED |
+| Share of actors under 1 year old | 93.5%; 36,256 created in 2026 so far | https://apifystats.com/stats.html | undated | UNVERIFIED. REVIEW 2026-10-03: a re-search summary of the same page gave "39,950 of 42,715 created in 2026; 36,256 through August" and monthly new-actor counts Jan 1,841 / Feb 1,729 / Mar 3,707 / Apr 3,699 / May 5,968 / Jun 7,496 / Jul 10,622 / Aug (partial) 1,194. The two figures are different cut-offs of a daily snapshot, not a contradiction. |
 | Actors used in last 30 days | 33,439 (78.3% of census), 96.8% run success, 190.6M runs | https://apifystats.com/stats.html | undated | UNVERIFIED |
 | Publishers with >=3 actors | 1,136 | https://apifystats.com/publishers/ | undated | UNVERIFIED |
 | Actors on x402 protocol | "more than 20,000" | https://use-apify.com/blog/apify-ai-agents-collections-2026 | 2026 | UNVERIFIED |
@@ -55,6 +55,8 @@ Reading: the head categories are owned by Apify (Instagram, Google Search, Booki
 | Apify's stated reason: 73% of surveyed customers preferred PPE over rentals | https://use-apify.com/docs/apify-for-developers/monetize-actors (quoting Apify) | 2026 | UNVERIFIED |
 | Developers report 40-70% revenue drops when auto-migrated rental -> pay-per-usage without a PPE plan | https://godberrystudios.com/posts/apify-pay-per-event-migration-playbook-2026/ | 2026 | UNVERIFIED (anecdotal) |
 | apifystats normalises all models to $/1k results and records every PPE event with description and price | https://apifystats.com/ | undated | UNVERIFIED |
+
+REVIEW (review-agent:desk, 2026-10-03): re-search confirms the primary (https://blog.apify.com/standardizing-actor-pricing/ : rentals retired 30 Sept 2026, remaining Actors migrated to pay-per-usage on 1 Oct 2026) and the echoes (imisofts, godberrystudios, use-apify). Still UNVERIFIED (snippet only) but consistent across four sources.
 
 Reading: as of this run (2026-10-03) the rental retirement happened **two days ago**. Expect churn in Phase 3 data: actors whose pricing model flipped to pay-per-usage on 2026-10-01, deprecated actors, and users shopping for replacements. The census should capture `pricingInfos.pricingModel` and the date it last changed if the API exposes it.
 
@@ -104,6 +106,8 @@ Reading: head categories with heavy competition sit at $0.2-$2/1k; long-tail nic
 
 Implication for pricing: with PPE the developer eats proxy cost unless the "+ usage" toggle is on. At Apify residential proxy rates this is the single biggest margin risk for browser-rendered sources; see the proxy-cost model in CANDIDATES.md.
 
+REVIEW (review-agent:desk, 2026-10-03): 80/20 split and the $100 bank / $20 PayPal payout minimums re-confirmed from https://help.apify.com/en/articles/8684010-make-money-publishing-your-actors-on-apify-store and https://use-apify.com/docs/apify-for-developers/monetize-actors (snippets, UNVERIFIED). Apify residential proxy price now captured: $8/GB Free & Starter, $7.50 Scale, $7 Business (https://scrapegraphai.com/blog/apify-pricing ; https://automationatlas.io/answers/apify-pricing-explained-2026/ , 2026, UNVERIFIED). The "$1.4M monthly across ~3,000 developers" aggregate in the table above did not re-surface and has no primary source; treat as remembered-grade until a source is found.
+
 ## 7. Plan tiers and PPE tier pricing
 
 | Claim | Source | Source date | Status |
@@ -133,7 +137,7 @@ Note for census: the Store API's pricing object appears to carry per-tier prices
 
 ## 9. What this means for ProgrammX (desk-level, to be tested)
 
-1. Site-level blue ocean is nearly gone: of ~45 niches checked (CANDIDATES.md), only PSX data, UK-specific mortgage rates, Oddschecker-specific odds, Platinumlist and a few micro-verticals returned zero Store hits via search. Even "monitor" variants exist for Rightmove, OLX Pakistan, The Gazette, Gumroad and generic back-in-stock.
+1. Site-level blue ocean is nearly gone: of ~45 niches checked (CANDIDATES.md), only PSX data, UK-specific mortgage rates, ~~Oddschecker-specific odds~~ (REVIEW 2026-10-03: consummate_mandala/oddschecker-comparison-scraper exists), Platinumlist and a few micro-verticals returned zero Store hits via search. Even "monitor" variants exist for Rightmove, OLX Pakistan, The Gazette, Gumroad and generic back-in-stock. REVIEW: re-search adds monitor variants for Vinted (4), Marktplaats (3), Wallapop (1), Kleinanzeigen (3), SpareRoom (1), Argos stock (1), Shopify (4+), Tadawul disclosures (1). "Monitor" is no longer an open shape in any classifieds or e-commerce niche checked; it is only open where the *source* is thin.
 2. The open differentiators are therefore execution variables the quality score rewards: reliability (daily tests), README/SEO fields, output schema, PPE with tiering, fast issue responses, and *shape* (monitor/diff with charge-only-for-new, per-record lookup callable from MCP).
 3. The 2026-10-01 rental retirement is a timing window: incumbents auto-migrated to pay-per-usage may be mispriced or deprecated; Phase 3 should flag niches where the top incumbent flipped model or went "under maintenance".
 4. Margin is decided by proxy bytes per row. Any source that forces browser rendering at one row per page is uneconomic at <$0.50/1k unless the "+ usage" toggle is on (see cost model in CANDIDATES.md).

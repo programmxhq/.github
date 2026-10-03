@@ -162,17 +162,80 @@ def test_cli_validate_plan_and_run(origin, proxy, cfg, cert, tmp_path):
                                      "expected_bytes_per_request": 10000}))
     defs = sorted(str(p) for p in (TOOLS / "probe" / "definitions").glob("*.yaml"))
     base = [sys.executable, "-m", "probe", "--config", str(cfg_file)]
-    r = subprocess.run(base + ["validate", *defs], cwd=TOOLS, capture_output=True, text=True)
+    alt = {"PATH": "/usr/bin:/bin", "PROBE_ALLOW_ALT_LEDGER": "1"}  # temp ledger is opt-in (see guard test)
+    r = subprocess.run(base + ["validate", *defs], cwd=TOOLS, capture_output=True, text=True, env=alt)
     assert r.returncode == 0, r.stderr
-    r = subprocess.run(base + ["plan", *defs], cwd=TOOLS, capture_output=True, text=True)
+    r = subprocess.run(base + ["plan", *defs], cwd=TOOLS, capture_output=True, text=True, env=alt)
     assert r.returncode == 0 and "TOTAL projected" in r.stdout, r.stderr
-    env = {"DECODO_USER": TEST_USER, "DECODO_PASS": TEST_PASS, "DECODO_HOST": f"127.0.0.1:{proxy.port}",
-           "PATH": "/usr/bin:/bin"}
+    env = {"DECODO_USER": TEST_USER, "DECODO_PASS": TEST_PASS, "DECODO_HOST": f"127.0.0.1:{proxy.port}", **alt}
     r = subprocess.run(base + ["--ca-file", cert[0], "run", str(dfile)], cwd=TOOLS, capture_output=True, text=True, env=env)
     assert r.returncode == 0, r.stderr
     assert "cli-probe: PASS" in r.stdout
     assert TEST_PASS not in r.stdout + r.stderr and TEST_USER not in r.stdout + r.stderr
-    r = subprocess.run(base + ["ledger"], cwd=TOOLS, capture_output=True, text=True)
+    assert "127.0.0.1" not in r.stdout + r.stderr  # DECODO_HOST is not printed either
+    r = subprocess.run(base + ["ledger"], cwd=TOOLS, capture_output=True, text=True, env=alt)
     assert json.loads(r.stdout)["proxy_bytes_total"] == proxy.total()
-    r = subprocess.run(base + ["run", str(dfile)], cwd=TOOLS, capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"})
+    r = subprocess.run(base + ["run", str(dfile)], cwd=TOOLS, capture_output=True, text=True, env=alt)
     assert r.returncode == 2 and "credentials missing" in r.stderr
+
+
+# ---------------------------------------------------------------- review regressions (review-agent:probe)
+
+def test_cli_refuses_alternate_ledger_without_opt_in(cfg, tmp_path):
+    cfg_file = tmp_path / "cfg.yaml"
+    cfg_file.write_text(yaml.safe_dump(cfg))  # ledger points into tmp_path: would start at 0 bytes used
+    r = subprocess.run([sys.executable, "-m", "probe", "--config", str(cfg_file), "ledger"], cwd=TOOLS,
+                       capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"})
+    assert r.returncode == 2 and "ledger path must be" in r.stderr
+
+
+def test_bad_redirect_location_is_recorded_not_lost(origin, proxy, creds, cfg, cert):
+    # Location with an out-of-range port used to raise ValueError out of fetch(), crashing the run
+    # and dropping the first hop's billed bytes from the ledger.
+    s = run(defn(origin, "/redirect-bad"), cfg, creds, cert, n=20)
+    assert s["requests_sent"] == 20 and s["outcomes"] == {"error": 20}
+    assert Ledger(cfg["paths"]["ledger"]).used() == proxy.total() > 0
+
+
+def test_concurrent_run_is_refused(origin, proxy, creds, cfg, cert):
+    led = Ledger(cfg["paths"]["ledger"])
+    with led.exclusive_run():
+        with pytest.raises(BudgetRefused, match="another probe run"):
+            run(defn(origin, "/api/items"), cfg, creds, cert)
+        with pytest.raises(BudgetRefused, match="another probe run"):
+            health_check(cfg, creds, ca_file=cert[0], urls=[origin.url("/json-ip")])
+    assert proxy.conns == []
+
+
+def test_abort_margin_cannot_be_configured_away(origin, proxy, creds, cfg, cert):
+    from probe.runner import abort_margin, plan
+    cfg["budget"]["abort_margin_bytes"] = -10_000_000  # would let requests read past the cap
+    assert abort_margin(cfg, HARD_CAP_BYTES) == 1_000_000
+    d = defn(origin, "/api/items", expected_bytes_per_request=500_000)
+    projected = plan(d, cfg, 20)["projected_bytes"]
+    cfg["budget"]["cap_bytes"] = projected + 500_000  # fits only if the 1 MB margin is ignored
+    assert plan(d, cfg, 20)["fits"] is False
+    with pytest.raises(BudgetRefused):
+        run(d, cfg, creds, cert, n=20)
+    assert proxy.conns == []
+
+
+def test_proxy_auth_failure_is_incomplete_not_kill(origin, proxy, creds, cfg, cert):
+    creds.password = "wrong-password-zz"
+    s = run(defn(origin, "/api/items"), cfg, creds, cert)
+    assert s["stopped_reason"] == "proxy_auth" and s["requests_sent"] == 1
+    assert s["verdict"] == "INCOMPLETE" and any(r.startswith("would KILL") for r in s["verdict_reasons"])
+
+
+def test_ctrl_c_mid_request_still_records_bytes(origin, proxy, creds, cfg, cert, monkeypatch):
+    import http.client
+
+    def boom(self):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(http.client.HTTPConnection, "getresponse", boom)  # after CONNECT + TLS + request
+    with pytest.raises(KeyboardInterrupt):
+        run(defn(origin, "/api/items"), cfg, creds, cert)
+    led = Ledger(cfg["paths"]["ledger"]).snapshot()
+    proxy.wait_idle()
+    assert led["proxy_bytes_total"] > 0 and led["proxy_bytes_total"] <= proxy.total()
+    assert led["runs"][-1]["status"] == "interrupted"

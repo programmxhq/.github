@@ -15,7 +15,7 @@ pip install -r research/tools/probe/requirements.txt
 # Credentials: env vars, or KEY=VALUE lines in the repo-root .env (gitignored). Never commit them.
 export DECODO_USER='...'  DECODO_PASS='...'  DECODO_HOST='gate.decodo.com:7000'
 cd research/tools                # every command below runs from here
-python -m pytest probe/tests -q  # 45 offline tests, ~6 s
+python -m pytest probe/tests -q  # 56 offline tests, ~6 s
 ```
 
 ## Run order
@@ -28,6 +28,7 @@ python -m probe health --sticky --count 3      # should report "kept the same IP
 python -m probe --upstream env health          # uses $HTTPS_PROXY as the first hop
 
 # 2. Harness smoke test on a public scraping sandbox (~2 MB total). Confirms the maths.
+python -m probe plan probe/definitions/books-toscrape-smoke.yaml probe/definitions/quotes-toscrape-api-smoke.yaml  # no network
 python -m probe run probe/definitions/books-toscrape-smoke.yaml probe/definitions/quotes-toscrape-api-smoke.yaml
 
 # 3. Candidates: write one definition each (copy probe/definitions/_TEMPLATE.yaml), then
@@ -71,9 +72,10 @@ Exit codes: 0 ok, 2 bad definition or missing creds, 3 refused by budget, 4 cap 
   Network errors are excluded and reported as `error_rate`. `hard_block_rate` excludes `empty`.
 - **Bytes/row** = all proxied bytes in the run, including blocked and failed requests, divided
   by rows from `ok` responses. **Cost per 1k rows** = `bytes_per_row * 1000 / 1e9 * price_per_GB`.
-- **Verdict** (`config.yaml: verdict`): KILL if block rate > 20%, cost/1k rows > $0.50 at the
-  `primary` price, error rate > 30%, or zero rows. INCOMPLETE if fewer than 20 requests ran
-  (for example, the run stopped at the cap). Otherwise PASS.
+- **Verdict** (`config.yaml: verdict`): INCOMPLETE if fewer than 20 requests ran (for example,
+  the run stopped at the cap or on a 407); any KILL reasons are listed as "would KILL". Else KILL
+  if block rate > 20%, cost/1k rows > $0.50 at the `primary` price, error rate > 30%, or zero
+  rows. Otherwise PASS.
 - **Vendors** (`classify.py`, sources cited inline): Cloudflare, Akamai, DataDome,
   PerimeterX/HUMAN, Imperva/Incapsula, Kasada, AWS WAF, F5/Shape, Fastly (CDN only),
   reCAPTCHA, hCaptcha, Turnstile, Arkose and GeeTest. CDN presence (`cf-ray`, `x-served-by`)
@@ -92,6 +94,13 @@ Exit codes: 0 ok, 2 bad definition or missing creds, 3 refused by budget, 4 cap 
    request. `ledger.HARD_CAP_BYTES = 500_000_000` (decimal MB) is enforced in code, and config
    can only lower it.
 4. Health checks are billed and recorded under `_health`.
+5. Only one proxied run or health check at a time: each takes a non-blocking lock
+   (`traffic_ledger.json.run.lock`, gitignored) and a second one is refused, because two runs
+   would otherwise both spend the same per-request headroom.
+6. `abort_margin_bytes` has a 1 MB floor in code. The CLI refuses a `--config` whose ledger path is
+   not `research/probes/traffic_ledger.json` (a fresh ledger would start at zero); only the
+   offline tests set `PROBE_ALLOW_ALT_LEDGER=1`.
+7. Ctrl-C during a request is caught long enough to record that request's bytes, then re-raised.
 
 ## UNVERIFIED (confirm in the live session)
 
@@ -133,4 +142,4 @@ the success predicate. `definition.py` validates definitions (public only: no au
 headers, no `user:pass@` URLs). `ledger.py` holds the budget. `runner.py` runs probes, writes
 summaries and PROBES.md, and does the health check. `__main__.py` is the CLI. `tests/` holds a
 fixture origin (HTTP and HTTPS with a throwaway cert), a stub forward proxy that counts bytes,
-and 45 tests.
+and 56 tests.

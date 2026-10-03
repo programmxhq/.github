@@ -17,7 +17,7 @@ from . import classify as C
 from .creds import REDACTOR, REPO_ROOT, Credentials, new_session_id, proxy_username
 from .definition import ProbeDefinition
 from .extract import check_success, extract
-from .ledger import BudgetRefused, Ledger
+from .ledger import MIN_ABORT_MARGIN_BYTES, BudgetRefused, Ledger
 from .wire import FetchResult, ProxySpec, fetch
 
 CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
@@ -65,7 +65,15 @@ def upstream_from_arg(arg: str | None, cfg: dict) -> ProxySpec | None:
 
 
 def proxy_for(creds: Credentials, session_id: str | None, duration: int | None) -> ProxySpec:
-    return ProxySpec(creds.host, creds.port, proxy_username(creds.user, session_id, duration), creds.password)
+    username = proxy_username(creds.user, session_id, duration)
+    REDACTOR.add_basic(username, creds.password)  # sticky usernames get their own Basic token
+    return ProxySpec(creds.host, creds.port, username, creds.password)
+
+
+def abort_margin(cfg: dict, cap: int) -> int:
+    """Headroom kept below the cap. Config may raise it but not lower it below 1 MB (or cap/10
+    for the tiny caps the tests use), so a config edit cannot turn the hard cap into a soft one."""
+    return max(int(cfg["budget"].get("abort_margin_bytes", 0)), min(MIN_ABORT_MARGIN_BYTES, cap // 10))
 
 
 # ---------------------------------------------------------------- one request (+redirects)
@@ -85,8 +93,13 @@ def fetch_follow(url: str, *, defn: ProbeDefinition, proxy, upstream, timeout, m
         loc = r.header("location")
         if (defn.follow_redirects and not r.error and r.status in REDIRECTS and loc
                 and acc["redirects"] < max_redirects):
+            try:
+                nxt = urljoin(cur, loc)
+            except ValueError:  # malformed Location: stop here, keep the bytes already counted
+                acc["final_url"] = cur
+                return r, acc
             acc["redirects"] += 1
-            cur = urljoin(cur, loc)
+            cur = nxt
             if r.status in (301, 302, 303) and method == "POST":
                 method, body = "GET", None
             continue
@@ -171,11 +184,13 @@ def summarize(defn: ProbeDefinition, cfg: dict, records: list[dict], meta: dict)
         kill.append(f"cost/1k rows ${cost[primary]:.3f} > ${v['max_cost_per_1k_rows_usd']:.2f}")
     if error_rate is not None and error_rate > v["max_error_rate"]:
         kill.append(f"error rate {error_rate:.0%} > {v['max_error_rate']:.0%}")
-    if kill:
-        verdict = "KILL"
-    elif sent < v["min_requests_for_verdict"]:
+    if sent < v["min_requests_for_verdict"]:
+        # Too few samples to KILL or PASS (e.g. stopped at the cap, or a 407 on request 1).
         verdict = "INCOMPLETE"
-        kill.append(f"only {sent} requests completed (stopped: {meta.get('stopped_reason')})")
+        kill = [f"only {sent} requests completed (stopped: {meta.get('stopped_reason')})"] + [
+            f"would KILL: {k}" for k in kill]
+    elif kill:
+        verdict = "KILL"
     else:
         verdict = "PASS"
     notes = []
@@ -291,7 +306,7 @@ def plan(defn: ProbeDefinition, cfg: dict, n: int | None = None, repo_root: Path
     return {"n": n, "est_bytes_per_request": int(est), "estimate_basis": basis, "projected_bytes": projected,
             "per_probe_max_bytes": b["per_probe_max_bytes"], "ledger_used": used, "cap": ledger.cap,
             "remaining": max(0, ledger.cap - used),
-            "fits": projected <= b["per_probe_max_bytes"] and used + projected + int(b.get("abort_margin_bytes", 0)) <= ledger.cap}
+            "fits": projected <= b["per_probe_max_bytes"] and used + projected + abort_margin(cfg, ledger.cap) <= ledger.cap}
 
 
 def run_probe(
@@ -319,11 +334,22 @@ def run_probe(
     if p["projected_bytes"] > b["per_probe_max_bytes"]:
         raise BudgetRefused(f"projected {p['projected_bytes']:,} B exceeds per-probe max {b['per_probe_max_bytes']:,} B")
     ledger = Ledger(cfg_path(cfg, "ledger", repo_root), b["cap_bytes"])
-    ledger.check_projection(p["projected_bytes"] + int(b.get("abort_margin_bytes", 0)))
+    margin = abort_margin(cfg, ledger.cap)
+    ledger.check_projection(p["projected_bytes"] + margin)
     if dry_run:
         return {"dry_run": True, **p}
     if creds is None:
         raise ProbeAbort("Decodo credentials missing: set DECODO_USER, DECODO_PASS, DECODO_HOST (env or repo-root .env)")
+    with ledger.exclusive_run():  # one proxied run at a time, so two runs cannot share the same headroom
+        ledger.check_projection(p["projected_bytes"] + margin)
+        return _run_locked(defn, cfg, creds, ledger, p, margin, session=session, baseline=baseline,
+                           upstream=upstream, ca_file=ca_file, repo_root=repo_root, sleep=sleep, log=log)
+
+
+def _run_locked(defn, cfg, creds, ledger, p, margin, *, session, baseline, upstream, ca_file, repo_root,
+                sleep, log) -> dict:
+    rq, b = cfg["requests"], cfg["budget"]
+    n = p["n"]
 
     session = session or defn.session or rq["session"]
     duration = defn.sticky_duration_min or rq["sticky_duration_min"]
@@ -354,6 +380,9 @@ def run_probe(
                     url = defn.url_for(i)
                     r, acc = fetch_follow(url, proxy=None, byte_limit=None, **common)
                     ledger.record(run_id, defn.name, acc["wire_sent"] + acc["wire_recv"], proxied=False)
+                    if r.error_kind == "interrupted":
+                        stopped = "interrupted"
+                        raise KeyboardInterrupt
                     rec = record_for(run_id, i, "direct", "none", None, url, r, acc, evaluate(r, defn))
                     emit(rec)
                     log(f"[base {i + 1}] {rec['status']} {rec['outcome']} rows={rec['rows']} {rec['bytes_wire_total']:,} B")
@@ -361,7 +390,6 @@ def run_probe(
             proxy = proxy_for(creds, session_id, duration if session_id else None)
             run_bytes = 0
             for i in range(n):
-                margin = int(b.get("abort_margin_bytes", 0))
                 remaining = ledger.cap - ledger.used() - margin
                 room = min(remaining, b["per_probe_max_bytes"] - run_bytes - margin)
                 if room < b["min_reserve_bytes"]:
@@ -373,6 +401,9 @@ def run_probe(
                 nbytes = acc["wire_sent"] + acc["wire_recv"]
                 run_bytes += nbytes
                 ledger.record(run_id, defn.name, nbytes, proxied=True)
+                if r.error_kind == "interrupted":  # bytes are recorded; now honour Ctrl-C
+                    stopped = "interrupted"
+                    raise KeyboardInterrupt
                 rec = record_for(run_id, i, "proxy", session, session_id, url, r, acc, evaluate(r, defn))
                 emit(rec)
                 vend = ",".join(rec["antibot"]) or "-"
@@ -425,9 +456,15 @@ def health_check(cfg: dict, creds: Credentials, *, count: int = 1, sticky: bool 
                  repo_root: Path = REPO_ROOT, log=print) -> list[dict]:
     urls = urls or cfg["health"]["ip_echo_urls"]
     ledger = Ledger(cfg_path(cfg, "ledger", repo_root), cfg["budget"]["cap_bytes"])
-    hmargin = int(cfg["budget"].get("abort_margin_bytes", 0))
+    hmargin = abort_margin(cfg, ledger.cap)
     if ledger.remaining() - hmargin < cfg["budget"]["min_reserve_bytes"]:
         raise BudgetRefused("Decodo traffic cap reached; health check refused")
+    with ledger.exclusive_run():
+        return _health_locked(cfg, creds, ledger, hmargin, urls, count=count, sticky=sticky, upstream=upstream,
+                              ca_file=ca_file, log=log)
+
+
+def _health_locked(cfg, creds, ledger, hmargin, urls, *, count, sticky, upstream, ca_file, log) -> list[dict]:
     sid = new_session_id() if sticky else None
     proxy = proxy_for(creds, sid, cfg["requests"]["sticky_duration_min"] if sid else None)
     run_id = f"health-{utc_now('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:4]}"
@@ -441,6 +478,8 @@ def health_check(cfg: dict, creds: Credentials, *, count: int = 1, sticky: bool 
                           timeout=float(cfg["requests"]["timeout_s"]), max_body_bytes=200_000,
                           byte_limit=max(0, ledger.remaining() - hmargin), ca_file=ca_file)
                 ledger.record(run_id, "_health", r.wire_total, proxied=True)
+                if r.error_kind == "interrupted":
+                    raise KeyboardInterrupt
                 info = {"i": i, "endpoint": u, "status": r.status, "latency_ms": round(r.elapsed_ms, 1),
                         "ttfb_ms": round(r.ttfb_ms, 1) if r.ttfb_ms else None, "bytes": r.wire_total,
                         "exit_ip": None, "country": None, "error": REDACTOR.redact(r.error) if r.error else None}

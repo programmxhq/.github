@@ -25,6 +25,9 @@ export const INPUT_DEFAULTS = {
 
 const MONITORING_MODES = new Set(['all', 'new', 'newOrChanged']);
 const PROXY_PROVIDERS = new Set(['auto', 'decodo', 'apify', 'custom', 'none']);
+// Key-value store record keys (@apify/consts KEY_VALUE_STORE_KEY_REGEX). getValue() does not enforce it but
+// setValue() does, so an invalid key would only fail when saving monitoring state AFTER items were charged.
+const KV_KEY_REGEX = /^[a-zA-Z0-9!\-_.'()]{1,256}$/;
 
 /** Parses `since` ("YYYY-MM-DD", full ISO, or "7 days") into a Date, or null when empty. */
 export function parseSince(since, now = new Date()) {
@@ -53,6 +56,9 @@ export function normalizeInput(raw) {
 
     if (!MONITORING_MODES.has(input.monitoringMode)) throw new Error(`Invalid monitoringMode: ${input.monitoringMode}`);
     if (!PROXY_PROVIDERS.has(input.proxyProvider)) throw new Error(`Invalid proxyProvider: ${input.proxyProvider}`);
+    if (input.monitoringKey && !KV_KEY_REGEX.test(input.monitoringKey)) {
+        throw new Error(`Invalid monitoringKey "${input.monitoringKey}": use 1-256 characters from a-z A-Z 0-9 ! - _ . ' ( )`);
+    }
     if (!Array.isArray(input.startUrls) || !Array.isArray(input.ids)) throw new Error('startUrls and ids must be arrays');
     if (input.startUrls.length === 0 && input.ids.length === 0) {
         throw new Error('Provide at least one start URL or item ID.');
