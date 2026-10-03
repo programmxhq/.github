@@ -157,9 +157,11 @@ struct Card: Identifiable {
 /// - ContentEarly.swift: `dawn`, `bloom`
 /// - ContentBuild.swift: `build`
 /// - ContentLate.swift: `harvest`, `dusk`, `ambitionCards`
+/// - ContentExtra.swift: `lateDusk`, `family`, `ambitionExtra`
 enum Content {
     static let all: [Card] = {
-        let pools: [[Card]] = [dawn, bloom, build, harvest, dusk, ambitionCards, keepsakeCards, fillerCards]
+        let pools: [[Card]] = [dawn, bloom, build, harvest, dusk, ambitionCards, keepsakeCards, fillerCards,
+                               lateDusk, family, ambitionExtra]
         let cards = pools.flatMap { $0 }
         assert(Set(cards.map(\.id)).count == cards.count, "Duplicate card ids in content")
         return cards
@@ -170,5 +172,35 @@ enum Content {
     /// Filler cards whose age range overlaps the stage. Used only to pad a hand.
     static func fillers(for stage: Stage) -> [Card] {
         fillerCards.filter { $0.ages.overlaps(stage.ages) }
+    }
+}
+
+// MARK: - Placeholder rendering
+
+extension Effect {
+    func rendered(_ f: (String) -> String) -> Effect {
+        var e = self
+        e.text = f(text)
+        return e
+    }
+}
+
+extension Outcome {
+    func rendered(_ f: (String) -> String) -> Outcome {
+        switch self {
+        case .sure(let e):
+            return .sure(e.rendered(f))
+        case .gamble(let pct, let win, let lose):
+            return .gamble(pct: pct, win: win.rendered(f), lose: lose.rendered(f))
+        }
+    }
+}
+
+extension Card {
+    /// A copy with {spouse}/{kid}/{kids}/{name} placeholders filled for display.
+    func rendered(_ f: (String) -> String) -> Card {
+        Card(id: id, ages: ages, emoji: emoji, title: f(title), body: f(body), weight: weight, once: once,
+             priority: priority, filler: filler, cond: cond,
+             choices: choices.map { Choice(label: f($0.label), outcome: $0.outcome.rendered(f)) })
     }
 }

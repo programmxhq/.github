@@ -165,7 +165,19 @@ struct TraitDef {
 // MARK: - Ambitions
 
 enum Ambition: String, Codable, CaseIterable, Hashable {
-    case fortune, renown, hearth, scholar, wanderer, elder
+    case fortune, renown, hearth, scholar, wanderer, elder, legacy, thrill
+
+    /// Always available. `legacy` and `thrill` are unlocked by achievements.
+    static let base: [Ambition] = [.fortune, .renown, .hearth, .scholar, .wanderer, .elder]
+
+    /// The achievement that unlocks this ambition, nil if always available.
+    var unlockedBy: Achievement? {
+        switch self {
+        case .legacy: return .dynasty
+        case .thrill: return .dicey
+        default: return nil
+        }
+    }
 
     /// Definitions live in `AmbitionDef.all` (ContentCore.swift).
     var def: AmbitionDef {
@@ -187,6 +199,10 @@ enum Ambition: String, Codable, CaseIterable, Hashable {
             return life.flags.filter { $0.hasPrefix("saw_") }.count >= 5
         case .elder:
             return life.age >= 90 && life.stats.heart >= 50
+        case .legacy:
+            return life.has(flag: "kids") && life.has(flag: "own_home") && life.money >= 300
+        case .thrill:
+            return life.gamblesWon >= 8
         }
     }
 
@@ -208,6 +224,12 @@ enum Ambition: String, Codable, CaseIterable, Hashable {
             p = Double(life.flags.filter { $0.hasPrefix("saw_") }.count) / 5
         case .elder:
             p = Double(life.age) / 90
+        case .legacy:
+            let met = [life.has(flag: "kids"), life.has(flag: "own_home"), life.money >= 300]
+                .filter { $0 }.count
+            p = Double(met) / 3
+        case .thrill:
+            p = Double(life.gamblesWon) / 8
         }
         // Never show a full bar for an unmet goal.
         return min(max(p, 0), 0.99)
@@ -332,9 +354,16 @@ struct Life: Codable {
     var deathCause: DeathCause?
     var heirloomReceived: Heirloom?
     var generation: Int
+    var spouseName: String? = nil
+    var kidNames: [String] = []
+    var gamblesWon: Int = 0
+    /// Set for a Daily Challenge life ("yyyy-MM-dd"); such lives sit outside the family line.
+    var dailyKey: String? = nil
 
     var stage: Stage { Stage.of(age: age) }
     var fullName: String { "\(name) \(surname)" }
+
+    var isDaily: Bool { dailyKey != nil }
 
     func has(_ t: Trait) -> Bool { traits.contains(t) }
     func has(flag: String) -> Bool { flags.contains(flag) }
@@ -370,6 +399,51 @@ struct Life: Codable {
     }
 }
 
+extension Life {
+    /// Fills card text placeholders: {name}, {spouse}, {kid}, {kids}.
+    func render(_ text: String) -> String {
+        guard text.contains("{") else { return text }
+        let kidsText: String
+        switch kidNames.count {
+        case 0: kidsText = "the kids"
+        case 1: kidsText = kidNames[0]
+        default: kidsText = kidNames.dropLast().joined(separator: ", ") + " and " + (kidNames.last ?? "")
+        }
+        return text
+            .replacingOccurrences(of: "{name}", with: name)
+            .replacingOccurrences(of: "{spouse}", with: spouseName ?? "your partner")
+            .replacingOccurrences(of: "{kids}", with: kidsText)
+            .replacingOccurrences(of: "{kid}", with: kidNames.first ?? "the kid")
+    }
+
+    /// Decodes saves written before the family/daily fields existed.
+    /// Lives in an extension so the memberwise initializer is kept.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        surname = try c.decode(String.self, forKey: .surname)
+        age = try c.decode(Int.self, forKey: .age)
+        stats = try c.decode(Stats.self, forKey: .stats)
+        money = try c.decode(Int.self, forKey: .money)
+        income = try c.decode(Int.self, forKey: .income)
+        traits = try c.decode([Trait].self, forKey: .traits)
+        flags = try c.decode(Set<String>.self, forKey: .flags)
+        ambition = try c.decode(Ambition.self, forKey: .ambition)
+        turn = try c.decode(Int.self, forKey: .turn)
+        playedCardIDs = try c.decode(Set<String>.self, forKey: .playedCardIDs)
+        cooldown = try c.decode([String: Int].self, forKey: .cooldown)
+        history = try c.decode([HistoryEntry].self, forKey: .history)
+        alive = try c.decode(Bool.self, forKey: .alive)
+        deathCause = try c.decodeIfPresent(DeathCause.self, forKey: .deathCause)
+        heirloomReceived = try c.decodeIfPresent(Heirloom.self, forKey: .heirloomReceived)
+        generation = try c.decode(Int.self, forKey: .generation)
+        spouseName = try c.decodeIfPresent(String.self, forKey: .spouseName)
+        kidNames = try c.decodeIfPresent([String].self, forKey: .kidNames) ?? []
+        gamblesWon = try c.decodeIfPresent(Int.self, forKey: .gamblesWon) ?? 0
+        dailyKey = try c.decodeIfPresent(String.self, forKey: .dailyKey)
+    }
+}
+
 // MARK: - Records & UI state
 
 struct LifeRecord: Codable, Identifiable {
@@ -383,6 +457,11 @@ struct LifeRecord: Codable, Identifiable {
     let epitaph: String
     let generation: Int
     let date: Date
+    /// Filled in when the player picks what this life passes on.
+    var heirloomPassed: Heirloom? = nil
+    var spouseName: String? = nil
+    var kidNames: [String]? = nil
+    var daily: Bool? = nil
 }
 
 enum Phase: String, Codable {

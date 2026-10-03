@@ -55,6 +55,10 @@ struct SaveData: Codable {
     var pendingHeirloom: Heirloom?
     var hallOfFame: [LifeRecord]
     var rng: SeededRNG
+    // Added after v1; optional so older saves still decode.
+    var lineage: [LifeRecord]? = nil
+    var achievements: [String]? = nil
+    var dailyBest: [String: Int]? = nil
 }
 
 enum Persistence {

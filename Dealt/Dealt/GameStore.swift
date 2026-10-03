@@ -16,11 +16,21 @@ import Observation
     var birthTraitPreview: Trait
     var suggestedName: String
     private(set) var rng: SeededRNG
+    /// Every life of the current family, oldest first (daily lives excluded).
+    var lineage: [LifeRecord] = []
+    var achievements: Set<Achievement> = []
+    /// Achievements first earned by the life that just ended.
+    var newAchievements: [Achievement] = []
+    /// Best Daily Challenge score per day key.
+    var dailyBest: [String: Int] = [:]
+    /// False in tests: nothing is read from or written to disk.
+    private let persists: Bool
 
     // MARK: - Init / restore
 
-    init() {
-        let saved = Persistence.load()
+    init(persist: Bool = true) {
+        self.persists = persist
+        let saved = persist ? Persistence.load() : nil
         self.birthTraitPreview = GameStore.randomBirthTrait(excluding: nil)
         self.suggestedName = GameStore.randomFirstName(excluding: nil)
         if let s = saved {
@@ -30,6 +40,9 @@ import Observation
             self.generation = max(1, s.generation)
             self.hallOfFame = s.hallOfFame
             self.pendingHeirloom = s.pendingHeirloom
+            self.lineage = s.lineage ?? []
+            self.achievements = Set((s.achievements ?? []).compactMap { Achievement(rawValue: $0) })
+            self.dailyBest = s.dailyBest ?? [:]
             self.life = s.life
             self.phase = s.phase
             var restored: [Card] = []
@@ -55,11 +68,11 @@ import Observation
             heirloomOptions = []
         case .summary:
             hand = []
-            if life == nil {
+            if let l = life {
+                heirloomOptions = l.isDaily ? [] : makeHeirloomOptions()
+            } else {
                 phase = .start
                 heirloomOptions = []
-            } else {
-                heirloomOptions = makeHeirloomOptions()
             }
         case .playing:
             guard let l = life else {
@@ -82,7 +95,9 @@ import Observation
             let valid = hand.count == 3
                 && Set(ids).count == 3
                 && hand.allSatisfy { $0.filler || $0.eligible(for: l) }
-            if !valid {
+            if valid {
+                hand = hand.map { card in card.rendered { l.render($0) } }
+            } else {
                 dealHand()
                 save()
             }
@@ -122,7 +137,13 @@ import Observation
         suggestedName = GameStore.randomFirstName(excluding: suggestedName)
     }
 
+    func isUnlocked(_ ambition: Ambition) -> Bool {
+        guard let needed = ambition.unlockedBy else { return true }
+        return achievements.contains(needed)
+    }
+
     func startLife(name: String, ambition: Ambition, seed: UInt64?) {
+        let ambition = isUnlocked(ambition) ? ambition : .fortune
         if let seed = seed {
             rng = SeededRNG(seed: seed)
         } else {
@@ -141,10 +162,54 @@ import Observation
         life = newLife
         pendingHeirloom = nil
         heirloomOptions = []
+        newAchievements = []
         toast = nil
         expandedCardID = nil
         phase = .playing
         dealHand()
+        save()
+    }
+
+    // MARK: - Daily Challenge
+
+    var todayKey: String { Daily.key() }
+    var todayBest: Int? { dailyBest[todayKey] }
+    var isDailyLife: Bool { life?.isDaily ?? false }
+
+    /// Starts today's seeded life. Name, trait, ambition, stats and the first hand are the same for
+    /// everyone. It never touches the family line, its heirloom or the generation count.
+    func startDaily() {
+        let key = todayKey
+        var r = SeededRNG(seed: Daily.seed(for: key))
+        let ambition = r.pick(Ambition.base)
+        let trait = r.pick(Trait.birthPool)
+        let first = Names.first.isEmpty ? "Alex" : r.pick(Names.first)
+        let last = Names.surnames.isEmpty ? "Day" : r.pick(Names.surnames)
+        var newLife = Life.newborn(name: first, surname: last, ambition: ambition, birthTrait: trait,
+                                   heirloom: nil, generation: 1, rng: &r)
+        newLife.dailyKey = key
+        rng = r
+
+        life = newLife
+        heirloomOptions = []
+        newAchievements = []
+        toast = nil
+        expandedCardID = nil
+        phase = .playing
+        dealHand()
+        save()
+    }
+
+    /// Leaves a finished daily life and returns to the start screen; the family line is untouched.
+    func finishDaily() {
+        guard phase == .summary, isDailyLife else { return }
+        life = nil
+        hand = []
+        heirloomOptions = []
+        newAchievements = []
+        toast = nil
+        expandedCardID = nil
+        phase = .start
         save()
     }
 
@@ -180,26 +245,30 @@ import Observation
         guard choiceIndex >= 0, choiceIndex < card.choices.count else { return }
 
         let choice = card.choices[choiceIndex]
+        // Resolve from the unrendered card so outcome text can name a spouse or kid created by this effect.
+        let raw = Content.byID[card.id] ?? card
+        let rawChoice = choiceIndex < raw.choices.count ? raw.choices[choiceIndex] : choice
         let effect: Effect
         var gambleWon: Bool? = nil
-        switch choice.outcome {
+        switch rawChoice.outcome {
         case .sure(let e):
             effect = e
         case .gamble(_, let win, let lose):
-            let odds = effectiveOdds(choice) ?? 50
+            let odds = effectiveOdds(rawChoice) ?? 50
             let won = rng.roll(odds)
             gambleWon = won
+            if won { l.gamblesWon += 1 }
             effect = won ? win : lose
         }
-
-        l.history.append(HistoryEntry(age: l.age, emoji: card.emoji, title: card.title,
-                                      choice: choice.label, text: effect.text))
         l.playedCardIDs.insert(card.id)
         for other in hand where other.id != card.id && !other.filler {
             l.cooldown[other.id] = l.turn + 2
         }
 
         let chips = apply(effect, to: &l)
+        let text = l.render(effect.text)
+        l.history.append(HistoryEntry(age: l.age, emoji: card.emoji, title: card.title,
+                                      choice: choice.label, text: text))
 
         if effect.dies {
             l.deathCause = .card
@@ -209,7 +278,7 @@ import Observation
         let died = l.deathCause != nil
         life = l
 
-        toast = OutcomeToast(emoji: card.emoji, title: card.title, text: effect.text,
+        toast = OutcomeToast(emoji: card.emoji, title: card.title, text: text,
                              deltas: chips, died: died, gambleWon: gambleWon)
         expandedCardID = nil
         save()
@@ -308,7 +377,7 @@ import Observation
             }
         }
 
-        hand = chosen
+        hand = chosen.map { card in card.rendered { l.render($0) } }
         expandedCardID = nil
     }
 
@@ -419,9 +488,27 @@ import Observation
         }
         chips.append(contentsOf: traitChips)
 
-        // Flags (no chips).
+        // Flags. Marriage and kids get real names.
+        let wasMarried = life.has(flag: "married")
+        let hadKids = life.has(flag: "kids")
         for f in e.set { life.flags.insert(f) }
         for f in e.clear { life.flags.remove(f) }
+        if !wasMarried && life.has(flag: "married") {
+            let spouse = randomName(excluding: [life.name] + life.kidNames)
+            life.spouseName = spouse
+            chips.append("💍 \(spouse)")
+        } else if wasMarried && !life.has(flag: "married") {
+            life.spouseName = nil
+        }
+        if !hadKids && life.has(flag: "kids") && life.kidNames.isEmpty {
+            let count = Int.random(in: 1...3, using: &rng)
+            var names: [String] = []
+            for _ in 0..<count {
+                names.append(randomName(excluding: [life.name, life.spouseName ?? ""] + names))
+            }
+            life.kidNames = names
+            chips.append("👶 " + names.joined(separator: ", "))
+        }
 
         if e.dies { chips.append("🪦 Fatal") }
         return chips
@@ -433,11 +520,23 @@ import Observation
         l.deathCause = cause
         life = l
 
-        heirloomOptions = makeHeirloomOptions()
+        let earned = Achievement.earned(by: l)
+        newAchievements = earned.filter { !achievements.contains($0) }
+        achievements.formUnion(earned)
 
-        let record = LifeRecord(name: l.fullName, age: l.age, ambition: l.ambition,
+        var record = LifeRecord(name: l.fullName, age: l.age, ambition: l.ambition,
                                 achieved: l.ambition.achieved(l), score: score, rank: rank,
                                 epitaph: epitaph, generation: l.generation, date: Date())
+        record.spouseName = l.spouseName
+        record.kidNames = l.kidNames.isEmpty ? nil : l.kidNames
+        if let key = l.dailyKey {
+            record.daily = true
+            dailyBest[key] = max(dailyBest[key] ?? 0, record.score)
+            heirloomOptions = []
+        } else {
+            lineage.append(record)
+            heirloomOptions = makeHeirloomOptions()
+        }
         hallOfFame.append(record)
         hallOfFame.sort { $0.score > $1.score }
         if hallOfFame.count > 30 {
@@ -480,6 +579,9 @@ import Observation
     // MARK: - Summary
 
     func pickHeirloom(_ h: Heirloom) {
+        guard !isDailyLife else { return }
+        let kids = life?.kidNames ?? []
+        if !lineage.isEmpty { lineage[lineage.count - 1].heirloomPassed = h }
         pendingHeirloom = h
         generation += 1
         life = nil
@@ -490,11 +592,15 @@ import Observation
         phase = .start
         shuffleBirthTrait()
         shuffleName()
+        // The heir is one of the kids, when there are any.
+        if let heir = kids.randomElement() { suggestedName = heir }
+        newAchievements = []
         save()
     }
 
     func resetLineage() {
-        Persistence.wipe()
+        if persists { Persistence.wipe() }
+        lineage = []
         generation = 1
         surname = GameStore.randomSurname(excluding: surname)
         hallOfFame = []
@@ -552,10 +658,19 @@ import Observation
 
     // MARK: - Persistence
 
+    private func randomName(excluding: [String]) -> String {
+        let pool = Names.first.filter { !excluding.contains($0) }
+        if pool.isEmpty { return Names.first.first ?? "Sam" }
+        return rng.pick(pool)
+    }
+
     func save() {
+        guard persists else { return }
         Persistence.save(SaveData(phase: phase, life: life, handIDs: hand.map { $0.id },
                                   generation: generation, surname: surname,
                                   pendingHeirloom: pendingHeirloom, hallOfFame: hallOfFame,
-                                  rng: rng))
+                                  rng: rng, lineage: lineage,
+                                  achievements: achievements.map { $0.rawValue }.sorted(),
+                                  dailyBest: dailyBest))
     }
 }

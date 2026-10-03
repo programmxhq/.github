@@ -93,7 +93,7 @@ for m in re.finditer(r"\.(\w+): TraitDef\(.*?perTurn: (\[[^\]]*\]), luck: (-?\d+
     pt = {k: int(v) for k, v in re.findall(r'\.(\w+): (-?\d+)', m.group(2))}
     TRAITS[m.group(1)] = (pt, int(m.group(3)))
 BIRTH = ['lucky', 'stubborn', 'bookworm', 'daredevil', 'kind', 'cynic']
-AMBITIONS = ['fortune', 'renown', 'hearth', 'scholar', 'wanderer', 'elder']
+AMBITIONS = ['fortune', 'renown', 'hearth', 'scholar', 'wanderer', 'elder', 'legacy', 'thrill']
 
 # ---------- Engine port ----------
 
@@ -133,6 +133,8 @@ def achieved(L):
     if a == 'scholar': return s['mind'] >= 85 and 'published' in f
     if a == 'wanderer': return sum(x.startswith('saw_') for x in f) >= 5
     if a == 'elder': return L['age'] >= 90 and s['heart'] >= 50
+    if a == 'legacy': return 'kids' in f and 'own_home' in f and L['money'] >= 300
+    if a == 'thrill': return L['won'] >= 8
 
 def apply(e, L):
     for k, v in e['stats'].items(): L['stats'][k] = cl(L['stats'][k] + v)
@@ -168,13 +170,15 @@ def score_choice(ch, L, policy, rnd):
         v = sum(e['stats'].values()) + e['money'] * 0.5 - (500 if e['dies'] else 0)
         a = L['ambition']
         goal = {'fortune': ['money'], 'renown': ['famous'], 'hearth': ['married', 'kids'],
-                'scholar': ['published'], 'wanderer': ['saw_'], 'elder': []}[a]
+                'scholar': ['published'], 'wanderer': ['saw_'], 'elder': [],
+                'legacy': ['kids', 'own_home'], 'thrill': []}[a]
         for g in goal:
             if any(x.startswith(g) for x in e['set']) or g in e['add']: v += 40
         if a == 'fortune' and e['income'] is not None: v += (e['income'] - L['income']) * 3
         if a == 'fortune': v += e['money'] * 1.5
         return v
     if ch['kind'] == 'sure': return val(ch['e'])
+    if L['ambition'] == 'thrill': return 100 + ch['pct']
     p = max(5, min(95, ch['pct'] + luck(L))) / 100
     return p * val(ch['win']) + (1 - p) * val(ch['lose'])
 
@@ -182,7 +186,7 @@ def play(policy, rnd, stats):
     s = lambda b: cl(b + rnd.randint(-10, 10))
     L = dict(age=0, stats=dict(body=s(60), mind=s(50), heart=s(60), bonds=s(60)), money=0, income=0,
              traits=[rnd.choice(BIRTH)], flags=set(), ambition=rnd.choice(AMBITIONS), turn=0,
-             played=set(), cool={})
+             played=set(), cool={}, won=0)
     while True:
         hand = deal(L, rnd, stats)
         for c in hand: stats['seen'][c['id']] += 1
@@ -194,7 +198,9 @@ def play(policy, rnd, stats):
         for o in hand:
             if o is not card and not o['filler']: L['cool'][o['id']] = L['turn'] + 2
         if ch['kind'] == 'sure': e = ch['e']
-        else: e = ch['win'] if rnd.random() * 100 < max(5, min(95, ch['pct'] + luck(L))) else ch['lose']
+        elif rnd.random() * 100 < max(5, min(95, ch['pct'] + luck(L))):
+            e = ch['win']; L['won'] += 1
+        else: e = ch['lose']
         apply(e, L)
         if e['dies']: return L, 'card'
         if L['stats']['body'] <= 0: return L, 'body'
