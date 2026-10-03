@@ -1,0 +1,96 @@
+# Candidate 1: UK lender mortgage-rate monitor (desk_review.md adjusted top 5, rank 1).
+#
+# ToS / legal notes (UNVERIFIED, from search summaries 2026-10-03; nobody has read the T&Cs):
+#   * Lender marketing pages are public, no login, and are what brokers and journalists already
+#     copy by hand. Bank website T&Cs usually forbid "systematic extraction" or re-publication of
+#     content; product rates are facts, but the copyright/database-right position for a
+#     commercial daily feed needs a legal check before launch (UK sui generis database right).
+#   * Aggregators (Moneyfacts, MoneySuperMarket, Uswitch) are deliberately EXCLUDED, per
+#     desk_review.md: Moneyfacts sells the same data as a paid API/datafeed and aggregator T&Cs are
+#     the higher-risk leg. Intermediary rate-sheet PDFs (e.g. intermediaries.hsbc.co.uk) are public
+#     but are PDFs; left out of this probe (row counting in compressed PDF streams is not possible).
+#   * robots.txt for these hosts was not visible in any search result: check
+#     https://<host>/robots.txt by hand in the live session before the first run.
+#
+# How rows are counted (read before trusting rows/request):
+#   The harness supports one `extract` spec. Because no rate table's markup has been seen yet,
+#   `extract` is the ROBUST MARKER: distinct interest-rate strings ("4.69%") per page, counted
+#   once each via a negative lookahead. This is a LOWER bound on product rows (two products that
+#   share a rate count once) plus a few non-product rates (SVR, base rate), so cost/row is on the
+#   conservative side. `extract_precise` below is NOT read by the harness; it is the table-row
+#   selector to switch to once the first live response shows the markup.
+#
+# Pages flagged CALCULATOR: search summaries say these show rates only after a form
+# ("get a personalised rate"); they may come back as `empty` (0 rows) with no block at all.
+# Read `empty` on those URLs as "JS-rendered, needs the XHR endpoint", not as anti-bot.
+name: uk-mortgage-lender-rates
+candidate_ref: "research/reviews/desk_review.md#4 rank 1; research/desk/CANDIDATES.md row 3 / S3"
+public_only: true
+notes: >-
+  Daily-diff monitor of direct-lender rate tables. 30 requests over 25 URLs from 8 lenders
+  (HSBC, NatWest, Halifax, Lloyds, Barclays, Santander, Coventry BS, Nationwide). The 5
+  table pages most likely to be static are requested twice to mimic a repeat poll.
+  Tests: server-rendered vs JS tables, anti-bot per lender, bytes per rate row.
+urls:
+  # --- HSBC UK (static rate tables per search summary: rows with rate, fee, LTV) ---
+  - https://www.hsbc.co.uk/mortgages/our-rates/
+  - https://www.hsbc.co.uk/mortgages/buy-to-let/rates/
+  - https://www.hsbc.co.uk/mortgages/move-your-mortgage/rates/
+  - https://www.hsbc.co.uk/mortgages/our-rates/                       # repeat poll
+  # --- NatWest ---
+  - https://www.natwest.com/mortgages/mortgage-rates.html
+  - https://www.natwest.com/mortgages/mortgage-comparison/90-percent-mortgages.html
+  - https://www.natwest.com/mortgages/remortgage-to-natwest.html
+  - https://www.natwest.com/mortgages/mortgage-rates.html             # repeat poll
+  # --- Halifax (Lloyds Banking Group) ---
+  - https://www.halifax.co.uk/mortgages/mortgage-rates.html           # CALCULATOR? summary says "use our calculator"
+  - https://www.halifax.co.uk/mortgages/buy-to-let/current-rates.html
+  - https://www.halifax.co.uk/mortgages/10-year-fixed-rate.html
+  - https://www.halifax.co.uk/mortgages/government-housing-schemes/95-percent-mortgages.html
+  - https://www.halifax.co.uk/mortgages/buy-to-let/current-rates.html # repeat poll
+  # --- Lloyds Bank ---
+  - https://www.lloydsbank.com/mortgages/mortgage-rates.html          # CALCULATOR? "get a personalised rate in minutes"
+  - https://www.lloydsbank.com/mortgages/10-year-fixed-rate.html
+  - https://www.lloydsbank.com/mortgages/mortgage-types/90-percent.html
+  # --- Barclays ---
+  - https://www.barclays.co.uk/mortgages/first-time-buyers/rates/
+  - https://www.barclays.co.uk/mortgages/existing-customer-centre/moving-home/rates/
+  - https://www.barclays.co.uk/mortgages/remortgage/
+  - https://www.barclays.co.uk/mortgages/mortgage-rates/              # UNVERIFIED (desk hypothesis, not seen in search)
+  - https://www.barclays.co.uk/mortgages/first-time-buyers/rates/     # repeat poll
+  # --- Santander UK ---
+  - https://www.santander.co.uk/personal/mortgages/mortgage-calculators/mortgage-product-comparison-calculator  # CALCULATOR? title "Compare our mortgage rates"
+  - https://www.santander.co.uk/personal/mortgages                    # UNVERIFIED
+  # --- Coventry Building Society ---
+  - https://www.coventrybuildingsociety.co.uk/member/mortgages/homeowners/new-customers/remortgage.html
+  # --- Nationwide (no rate-table URL surfaced; media pages and product pages did) ---
+  - https://www.nationwide.co.uk/mortgages/first-time-buyers/helping-hand-mortgage
+  - https://www.nationwide.co.uk/mortgages/our-mortgage-rates         # UNVERIFIED (guessed rate-table path)
+  - https://www.nationwide.co.uk/mortgages/                           # landing page ("nationwide.co.uk/mortgages" named in summary)
+  - https://www.hsbc.co.uk/mortgages/buy-to-let/rates/                # repeat poll
+  - https://www.natwest.com/mortgages/mortgage-comparison/90-percent-mortgages.html  # repeat poll
+  - https://www.coventrybuildingsociety.co.uk/member/mortgages/homeowners/new-customers/remortgage.html  # repeat poll
+headers:
+  Accept-Language: "en-GB,en;q=0.9"
+
+# ROBUST MARKER (used by the harness): distinct rate strings like 4.69% / 4.69 % / 4.69&nbsp;%.
+extract:
+  type: regex
+  pattern: '(\b\d{1,2}\.\d{2})(?:\s|&nbsp;)?%(?![\s\S]*?\b\1(?:\s|&nbsp;)?%)'
+# NOT read by the harness. Switch `extract` to this after the first live response. UNVERIFIED.
+extract_precise:
+  type: css
+  selector: "table tbody tr"          # UNVERIFIED: one <tr> per product on HSBC/NatWest tables
+  fields: {rate: "td:nth-child(1)", fee: "td:nth-child(3)"}   # UNVERIFIED column order
+rows_per_page_expected: 12            # 2/3/5/10-yr x 3-4 LTV bands on a table page; ~2-4 on product landing pages
+
+success:
+  status: [200]
+  min_rows: 3                          # SVR + base rate alone would give 1-2; 3+ means a rate table/list is present
+  body_not_contains: ["Access Denied", "Pardon Our Interruption"]
+
+expected_bytes_per_request: 180000    # UNVERIFIED guess: bank pages 60-150 KB compressed + ~6 KB TLS/CONNECT
+max_response_bytes: 2000000
+requests: 30
+session: rotating
+jitter_s: [2.0, 5.0]

@@ -1,0 +1,96 @@
+# Candidate 2: Lulu + Carrefour GCC grocery price monitor, UAE first (desk_review.md rank 2).
+#
+# ToS / legal notes (UNVERIFIED, search summaries 2026-10-03):
+#   * Lulu robots.txt (https://www.luluhypermarket.com/en-ae/robots.txt, per search summary)
+#     disallows search pages, cart, checkout and my-account, and lists a sitemap. This probe
+#     therefore uses NO search URLs, only category and product pages.
+#   * Carrefour UAE (Majid Al Futtaim) robots.txt was not visible in search; it publishes product
+#     sitemaps (https://www.carrefouruae.com/sitemaps/products0_ar.xml surfaced). Check
+#     https://www.carrefouruae.com/robots.txt by hand before the run.
+#   * Both sites' T&Cs were not read. Retail T&Cs commonly forbid automated access and commercial
+#     reuse; prices are facts, but a price-feed product resold to competitors is the scenario
+#     those clauses target. Legal check before launch.
+#   * GEO: our Decodo plan has NO country targeting (creds.py). Both storefronts may redirect or
+#     soft-block non-GCC exit IPs (store selection by location). Check `final_url` per request;
+#     an `empty` with a redirect to a store picker is geo, not anti-bot.
+#   * Sitemaps are deliberately not probed: one sitemap is 1-5 MB and would distort rows/request.
+#     The live actor would use them for discovery once a week.
+#
+# How rows are counted: `extract` is the ROBUST MARKER, the number of DISTINCT product ids in
+# /p/<digits> links (Lulu /p/2662930/, Carrefour /p/592447), counted once each even when a card
+# repeats the link and __NEXT_DATA__ repeats it again. On a product page it also counts
+# "related products", so detail-page rows are over-counted; those are 6 of 30 requests.
+# If both sites render tiles client-side only, every page is `empty`: then switch to the XHR
+# JSON endpoint found in the browser network tab (no endpoint surfaced in search).
+name: gcc-grocery-lulu-carrefour
+candidate_ref: "research/reviews/desk_review.md#4 rank 2; research/desk/CANDIDATES.md row 8 / S8"
+public_only: true
+notes: >-
+  Category (listing) pages are the monitor's main load: one request yields a page of prices for
+  the diff. A few product pages test EAN/detail enrichment cost. 30 URLs: 22 UAE, 4 other GCC
+  (Lulu KSA/KW/QA/BH), split ~50/50 Lulu/Carrefour.
+urls:
+  # --- Lulu UAE: category pages (confirmed in search) ---
+  - https://gcc.luluhypermarket.com/en-ae/grocery
+  - https://gcc.luluhypermarket.com/en-ae/fresh-food
+  - https://gcc.luluhypermarket.com/en-ae/electronics-mobiles-wearables/      # from incumbent README example
+  - https://gcc.luluhypermarket.com/en-ae/grocery?page=2                    # UNVERIFIED pagination param
+  - https://gcc.luluhypermarket.com/en-ae/grocery-food-cupboard/            # UNVERIFIED (KSA path from README, UAE assumed)
+  - https://gcc.luluhypermarket.com/en-ae/grocery-household/                # UNVERIFIED (BH path seen, UAE assumed)
+  - https://gcc.luluhypermarket.com/en-ae/grocery                           # repeat poll
+  - https://gcc.luluhypermarket.com/en-ae/fresh-food                        # repeat poll
+  # --- Lulu other GCC (confirmed in search) ---
+  - https://gcc.luluhypermarket.com/en-sa/grocery-food-cupboard/
+  - https://gcc.luluhypermarket.com/en-kw/grocery/
+  - https://gcc.luluhypermarket.com/en-qa/grocery/
+  - https://gcc.luluhypermarket.com/en-bh/grocery-household/
+  # --- Lulu UAE product page (from sitemap snippet) ---
+  - https://gcc.luluhypermarket.com/en-ae/deerma-smart-robotic-vacuum-cleaner-15000pa-white-dem-x80/p/2662930/
+  # --- Carrefour UAE: category pages (confirmed in search) ---
+  - https://www.carrefouruae.com/mafuae/en/c/F1700000                       # Fresh Food
+  - https://www.carrefouruae.com/mafuae/en/c/F21600000                      # Dairy & Eggs
+  - https://www.carrefouruae.com/mafuae/en/c/F11600000                      # Fruits & Vegetables
+  - https://www.carrefouruae.com/mafuae/en/c/F1701240                       # Rice
+  - https://www.carrefouruae.com/mafuae/en/c/F1200000                       # Bio & Organic
+  - https://www.carrefouruae.com/mafuae/en/c/bakery
+  - https://www.carrefouruae.com/mafuae/en/c/00002                          # Carrefour private label
+  - https://www.carrefouruae.com/mafuae/en/food-cupboard/organic-world-foods/usa/c/F1791100
+  - https://carrefouruae.com/mafuae/en/home-garden/kitchen-dining/food-storage-organising/c/NF8090200
+  - https://www.carrefouruae.com/mafuae/en/c/F21600000?currentPage=1        # UNVERIFIED pagination param
+  - https://www.carrefouruae.com/mafuae/en/c/F1700000                       # repeat poll
+  - https://www.carrefouruae.com/mafuae/en/c/F1701240                       # repeat poll
+  # --- Carrefour UAE: product pages (confirmed in search) ---
+  - https://www.carrefouruae.com/mafuae/en/rice-semolina/crf-bio-rice-drink-1l/p/592447
+  - https://www.carrefouruae.com/mafuae/en/powdered-milk/crf-milk-powder-pouch-25g/p/1270143
+  - https://www.carrefouruae.com/mafuae/en/baby-nourish-toiletries/johnson-s-baby-milk-and-rice-baby-cream-100g/p/1881649009311
+  - https://www.carrefouruae.com/mafuae/en/shower-bath-soap/bath-shower/shower-gel-beauty/nivea-shower-f-blends-apricot-300ml/p/1756574
+  - https://www.carrefouruae.com/mafuae/en/root-maf-category/food-navigation-category/fresh-food/dairy-eggs/chilled-desserts/cream-desserts/crf-selection-rice-milk-130gx2/p/1481227
+headers:
+  Accept-Language: "en-AE,en;q=0.9,ar;q=0.6"
+
+# ROBUST MARKER (used by the harness): distinct /p/<id> product ids anywhere in the body.
+extract:
+  type: regex
+  pattern: '(/p/\d{4,}(?!\d))(?![\s\S]*?\1(?!\d))'
+# NOT read by the harness; switch after the first live response. All UNVERIFIED.
+extract_precise:
+  carrefour:
+    type: json_in_html
+    selector: "script#__NEXT_DATA__"                           # UNVERIFIED: assumes Next.js
+    path: "props.initialState.search.products"                  # UNVERIFIED placeholder path
+  lulu:
+    type: css
+    selector: "[data-testid=product-card], .product-card, li.product-item"   # UNVERIFIED
+    fields: {title: "a[href*='/p/']", price: "[class*=price]"}
+rows_per_page_expected: 30            # UNVERIFIED: typical grocery grid 24-60 per page
+
+success:
+  status: [200]
+  min_rows: 1
+  body_not_contains: ["Access Denied", "Pardon Our Interruption", "Request unsuccessful"]
+
+expected_bytes_per_request: 350000    # UNVERIFIED guess: SPA HTML with embedded state, 150-400 KB compressed
+max_response_bytes: 3000000
+requests: 30
+session: rotating
+jitter_s: [2.0, 5.0]

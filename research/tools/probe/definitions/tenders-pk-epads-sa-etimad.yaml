@@ -1,0 +1,99 @@
+# Candidate 4: Pakistan EPADS/PPRA + Saudi Etimad new-tender monitor (desk_review.md rank 4).
+#
+# ToS / legal notes (UNVERIFIED, search summaries 2026-10-03):
+#   * Government procurement notices are published to be read; lowest ToS risk in the shortlist
+#     (desk_review.md). The PK incumbent (blessed_jouster/epad) states it "reads public pages only
+#     without logging in". No robots.txt for any of these hosts surfaced; check by hand.
+#   * Etimad: list pages and the visitor JSON endpoint are public; tender DETAIL pages and
+#     booklets may be login-gated (CANDIDATES.md L = 4). This probe hits list data only.
+#     Etimad terms were not read; Saudi gov portals may restrict reuse. Legal check before launch.
+#   * PK provincial portals "sometimes return 5xx/406 to cloud traffic" (blessed_jouster README).
+#     Expect `server_error` there; it is a reliability signal, not anti-bot.
+#   * GEO: no country targeting on our plan. Etimad may geo-filter non-Saudi IPs; PK portals may
+#     be slow from non-PK exits. Read latency and `error` per host.
+#   * The PPRA EPMS invoice pages are public in search but are billing documents; not probed.
+#
+# Endpoints:
+#   Etimad JSON (confirmed by search summary; public, no key): Tender/AllSupplierTendersForVisitorAsync
+#   with PageSize + PageNumber. Each record carries tenderId, referenceNumber, tenderName,
+#   agencyName ... Wrapper key of the list is UNVERIFIED ("data" assumed in extract_precise).
+#
+# How rows are counted: `extract` is the ROBUST MARKER, distinct tender identifiers of any of:
+#   "tenderId": <n>            Etimad JSON (confirmed field name)
+#   STenderId=<token>          Etimad HTML detail links (UNVERIFIED)
+#   TS<digits>E                PPRA EPMS web reference (confirmed format, e.g. TS0000006507E)
+#   /procurement/<type>/<n>    EPADS notice links (confirmed: pa.epads.gov.pk/procurement/goods/110295/sbd)
+# Provincial pages (Punjab, KP, AJK) use none of these; they are 3 of 30 requests and will show
+# as `empty` until a per-host marker is added. Subtract them before reading the block rate.
+name: tenders-pk-epads-sa-etimad
+candidate_ref: "research/reviews/desk_review.md#4 rank 4; research/desk/CANDIDATES.md row 26"
+public_only: true
+notes: >-
+  "Tenders since last run" monitor. 30 requests: 12 Etimad JSON pages (the cheap path),
+  4 Etimad HTML list pages, 14 Pakistan pages (EPADS federal, PPRA EPMS active/history,
+  legacy PPRA, one EPADS notice, Punjab/KP/AJK list pages).
+urls:
+  # --- Etimad visitor JSON (endpoint + params confirmed in search; page sizes are our choice) ---
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=1
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=2
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=3
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=4
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=5
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=6
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=1&PublishDateId=1   # UNVERIFIED PublishDateId value semantics ("today"?)
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=1&PublishDateId=5   # value seen in an HTML filter URL
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=1   # repeat poll
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=24&PageNumber=2   # repeat poll
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=50&PageNumber=1   # UNVERIFIED max PageSize
+  - https://tenders.etimad.sa/Tender/AllSupplierTendersForVisitorAsync?PageSize=50&PageNumber=2   # UNVERIFIED max PageSize
+  # --- Etimad visitor HTML list (confirmed in search) ---
+  - https://tenders.etimad.sa/Tender/AllTendersForVisitor
+  - https://tenders.etimad.sa/Tender/AllTendersForVisitor?PageNumber=2
+  - https://tenders.etimad.sa/Tender/AllTendersForVisitor?PageNumber=3
+  - https://tenders.etimad.sa/Tender/AllTendersForVisitor?MultipleSearch=&TenderCategory=&ReferenceNumber=&TenderNumber=&agency=041001000000&ConditionaBookletRange=&PublishDateId=1&LastOfferPresentationDate=&LastOfferPresentationDate=&TenderAreasIdString=&TenderTypeId=&TenderActivityId=&TenderSubActivityId=&AgencyCode=041001000000&FromLastOfferPresentationDateString=&ToLastOfferPresentationDateString=&SortDirection=DESC&Sort=SubmitionDate&PageSize=6&IsSearch=true&ConditionaBookletRange=&PublishDateId=5&PageNumber=1
+  # --- Pakistan federal: EPADS 2.0 (confirmed in search) ---
+  - https://epads.gov.pk/
+  - https://epads.gov.pk/                                    # repeat poll
+  - https://pa.epads.gov.pk/procurement/goods/110295/sbd    # notice detail (may be closed by now)
+  # --- Pakistan federal: PPRA EPMS (confirmed in search) ---
+  - https://epms.ppra.gov.pk/public/tenders/active-tenders
+  - https://epms.ppra.gov.pk/public/tenders/active-tenders?page=2   # UNVERIFIED (?page= confirmed on /public/contracts only)
+  - https://epms.ppra.gov.pk/public/tenders/active-tenders?page=3   # UNVERIFIED
+  - https://epms.ppra.gov.pk/public/tenders/tenders-history
+  - https://epms.ppra.gov.pk/public/tenders/active-tenders           # repeat poll
+  - https://epms.ppra.gov.pk/public/contracts?page=4
+  # --- Pakistan legacy + portal home (confirmed in search) ---
+  - https://old.ppra.org.pk/dad_tenders.asp
+  - https://ppra.gov.pk/
+  # --- Provinces (confirmed URLs; no row marker known -> expect `empty`) ---
+  - https://eproc.punjab.gov.pk/ActiveTenders.aspx
+  - http://www.kppra.gov.pk/kppra/activetenders
+  - https://www.ajkppra.gov.pk/advertisements.php
+headers:
+  # One header set serves both the JSON endpoint and the HTML pages.
+  Accept: "application/json, text/html;q=0.9, */*;q=0.8"
+  Accept-Language: "en-US,en;q=0.9,ar;q=0.7,ur;q=0.5"
+  X-Requested-With: XMLHttpRequest          # UNVERIFIED: ASP.NET MVC async actions often check it
+
+# ROBUST MARKER (used by the harness): distinct tender ids across the four id styles above.
+extract:
+  type: regex
+  pattern: '("tenderId"\s*:\s*\d+(?!\d)|STenderId=[A-Za-z0-9%+/=_-]{6,}(?![A-Za-z0-9%+/=_-])|TS\d{7,}E|/procurement/[a-z-]+/\d{3,}(?!\d))(?![\s\S]*?\1(?![\d%A-Za-z]))'
+# NOT read by the harness; switch after the first live response.
+extract_precise:
+  etimad_json: {type: json, path: "data"}                    # UNVERIFIED wrapper key
+  epms_html: {type: css, selector: "table tbody tr"}          # UNVERIFIED
+  epads_html: {type: css, selector: "table tbody tr"}         # UNVERIFIED ("EPADS table" per incumbent README)
+rows_per_page_expected: 20            # Etimad 24 per JSON page; EPMS/EPADS UNVERIFIED (10-25)
+
+success:
+  status: [200]
+  min_rows: 1
+  body_not_contains: ["Access Denied", "Request Rejected"]
+
+expected_bytes_per_request: 90000     # UNVERIFIED: JSON pages ~15-40 KB, HTML list pages 50-200 KB
+max_response_bytes: 2000000
+requests: 30
+session: rotating
+timeout_s: 45                          # PK portals are slow from abroad (incumbent README)
+jitter_s: [2.0, 5.0]
