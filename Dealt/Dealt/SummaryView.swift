@@ -9,6 +9,7 @@ struct SummaryView: View {
     @State private var picked: Heirloom?
     @State private var bannerShown = false
     @State private var shareImage: Image?
+    @State private var timelineOpen: Bool = false
 
     var body: some View {
         Group {
@@ -20,21 +21,23 @@ struct SummaryView: View {
             }
         }
         .fontDesign(.rounded)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
+    /// Decision first: the heirloom choice (or the daily result) sits right under the
+    /// tombstone; the reading material follows.
     private func screen(_ life: Life) -> some View {
         ScrollView {
             VStack(spacing: 20) {
-                Tombstone(life: life, rank: store.rank, epitaph: store.epitaph)
-                    .scaleEffect(appeared ? 1 : 0.8)
-                    .opacity(appeared ? 1 : 0)
-                AmbitionBadge(life: life)
-                actionRow(life)
+                header(life)
+                primarySection(life)
                 achievementsBanner
+                epitaphCard(life)
                 scoreCard
-                legacySection(life)
-                TimelineCard(history: life.history)
-                hallSection
+                TimelineCard(history: life.history, isExpanded: $timelineOpen)
+                if !store.isDailyLife {
+                    hallSection
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -65,32 +68,89 @@ struct SummaryView: View {
         }
     }
 
-    // MARK: - Share & family
+    // MARK: - Header
+
+    private func header(_ life: Life) -> some View {
+        TombstoneHeader(life: life, rank: store.rank)
+            .scaleEffect(appeared ? 1 : 0.8)
+            .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Primary action (heirloom or daily result)
+
+    @ViewBuilder
+    private func primarySection(_ life: Life) -> some View {
+        if store.isDailyLife {
+            dailyPanel(life)
+        } else {
+            heirloomSection
+        }
+    }
+
+    private func dailyPanel(_ life: Life) -> some View {
+        let key: String = life.dailyKey ?? store.todayKey
+        let score: Int = store.score
+        let best: Int = max(store.dailyBest[key] ?? score, score)
+        return DailyResultPanel(dayKey: key, score: score, best: best) {
+            Haptic.tap()
+            withAnimation(.easeInOut(duration: 0.4)) {
+                store.finishDaily()
+            }
+        }
+    }
+
+    // MARK: - Epitaph, share & family
 
     private var showsFamilyButton: Bool {
         !store.isDailyLife && !store.lineage.isEmpty
     }
 
+    private func epitaphCard(_ life: Life) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            CardHeading(text: "Epitaph")
+            Text(store.epitaph)
+                .font(.body)
+                .italic()
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+            actionRow(life)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
     @ViewBuilder
     private func actionRow(_ life: Life) -> some View {
         if shareImage != nil || showsFamilyButton {
-            HStack(spacing: 10) {
-                if let image = shareImage {
-                    ShareLink(item: image, preview: SharePreview("My life in Dealt", image: image)) {
-                        PillLabel(title: "Share epitaph", symbol: "square.and.arrow.up", color: Color.indigo)
-                    }
-                    .buttonStyle(PressableStyle())
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    actionButtons
                 }
-                if showsFamilyButton {
-                    Button {
-                        Haptic.tap()
-                        sheet = .family
-                    } label: {
-                        PillLabel(title: "Family tree", symbol: "tree.fill", color: Color.green)
-                    }
-                    .buttonStyle(PressableStyle())
+                VStack(spacing: 10) {
+                    actionButtons
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        if let image = shareImage {
+            ShareLink(item: image, preview: SharePreview("My life in Dealt", image: image)) {
+                PillLabel(title: "Share epitaph", symbol: "square.and.arrow.up", color: Color.indigo)
+            }
+            .buttonStyle(PressableStyle())
+        }
+        if showsFamilyButton {
+            Button {
+                Haptic.tap()
+                sheet = .family
+            } label: {
+                PillLabel(title: "Family tree", symbol: "tree.fill", color: Color.green)
+            }
+            .buttonStyle(PressableStyle())
         }
     }
 
@@ -116,29 +176,6 @@ struct SummaryView: View {
                 .scaleEffect(bannerShown ? 1 : 0.6)
                 .opacity(bannerShown ? 1 : 0)
                 .sensoryFeedback(.success, trigger: bannerShown)
-        }
-    }
-
-    // MARK: - Legacy (heirloom or daily result)
-
-    @ViewBuilder
-    private func legacySection(_ life: Life) -> some View {
-        if store.isDailyLife {
-            dailyPanel(life)
-        } else {
-            heirloomSection
-        }
-    }
-
-    private func dailyPanel(_ life: Life) -> some View {
-        let key: String = life.dailyKey ?? store.todayKey
-        let score: Int = store.score
-        let best: Int = max(store.dailyBest[key] ?? score, score)
-        return DailyResultPanel(dayKey: key, score: score, best: best) {
-            Haptic.tap()
-            withAnimation(.easeInOut(duration: 0.4)) {
-                store.finishDaily()
-            }
         }
     }
 
@@ -169,11 +206,15 @@ struct SummaryView: View {
 
     private var heirloomSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Pass something on")
-                .font(.title3.weight(.bold))
-            Text("Your heir carries one thing into the next life. Choose carefully.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Pass something on")
+                    .font(.title2.weight(.bold))
+                    .accessibilityAddTraits(.isHeader)
+                Text("Your heir carries one of these into the next life.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if store.heirloomOptions.isEmpty {
                 fallbackHeirloom
             } else {
@@ -248,7 +289,7 @@ private enum SummarySheet: String, Identifiable {
     var id: String { rawValue }
 }
 
-/// A capsule label for the secondary buttons under the tombstone.
+/// A capsule label for the secondary buttons in the epitaph card.
 private struct PillLabel: View {
     let title: String
     let symbol: String
@@ -258,11 +299,12 @@ private struct PillLabel: View {
         Label(title, systemImage: symbol)
             .font(.subheadline.weight(.semibold))
             .lineLimit(1)
-            .minimumScaleFactor(0.8)
+            .minimumScaleFactor(0.85)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
+            .padding(.horizontal, 12)
             .foregroundStyle(color)
-            .background(.regularMaterial, in: Capsule())
+            .background(color.opacity(0.12), in: Capsule())
             .overlay {
                 Capsule().strokeBorder(color.opacity(0.35), lineWidth: 1)
             }
@@ -495,6 +537,7 @@ struct TombstoneShareCard: View {
     }
 }
 
+
 private struct CardHeading: View {
     let text: String
 
@@ -507,43 +550,42 @@ private struct CardHeading: View {
     }
 }
 
-private struct Tombstone: View {
+/// The compact tombstone at the top of the summary: rank, name and age, ambition result.
+/// The full epitaph lives in its own card further down.
+private struct TombstoneHeader: View {
     let life: Life
     let rank: String
-    let epitaph: String
 
     private var shape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(topLeadingRadius: 90, bottomLeadingRadius: 20,
-                               bottomTrailingRadius: 20, topTrailingRadius: 90,
+        UnevenRoundedRectangle(topLeadingRadius: 64, bottomLeadingRadius: 20,
+                               bottomTrailingRadius: 20, topTrailingRadius: 64,
                                style: .continuous)
     }
 
-    private var footer: String {
+    private var nameLine: String {
         life.fullName + " · " + String(life.age)
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             Text("🪦")
-                .font(.system(size: 64))
+                .font(.system(size: 48))
+                .accessibilityHidden(true)
             Text(rank)
                 .font(.title.weight(.heavy))
                 .multilineTextAlignment(.center)
-            Text(epitaph)
-                .font(.body)
-                .italic()
+                .fixedSize(horizontal: false, vertical: true)
+            Text(nameLine)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            Divider()
-                .padding(.horizontal, 24)
-            Text(footer)
-                .font(.subheadline.weight(.semibold))
-                .multilineTextAlignment(.center)
+            AmbitionBadge(life: life)
+                .padding(.top, 4)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 36)
-        .padding(.bottom, 24)
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 18)
         .frame(maxWidth: .infinity)
         .background(.regularMaterial, in: shape)
         .overlay { shape.stroke(Color.primary.opacity(0.10), lineWidth: 1) }
@@ -555,25 +597,34 @@ private struct AmbitionBadge: View {
     let life: Life
 
     private var achieved: Bool { life.ambition.achieved(life) }
-    private var tint: Color { achieved ? Color.green : Color.red }
+
+    private var tint: Color {
+        if achieved { return Color.green }
+        return Color.red
+    }
 
     private var title: String {
         let def = life.ambition.def
-        return (achieved ? "✅ " : "❌ ") + def.emoji + " " + def.name
+        let mark: String = achieved ? "✅ " : "❌ "
+        let verdict: String = achieved ? "achieved" : "unfulfilled"
+        return mark + def.emoji + " " + def.name + " · " + verdict
+    }
+
+    private var spoken: String {
+        let verdict: String = achieved ? "achieved" : "unfulfilled"
+        return "Ambition " + life.ambition.def.name + ", " + verdict
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(tint)
-            Text(achieved ? "Ambition achieved" : "Ambition unfulfilled")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(tint.opacity(0.12), in: Capsule())
+        Text(title)
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(tint)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(tint.opacity(0.12), in: Capsule())
+            .accessibilityLabel(spoken)
     }
 }
 
@@ -599,7 +650,23 @@ private struct HeirloomTile: View {
     let chosen: Bool
 
     private var borderColor: Color {
-        chosen ? Color.yellow : Color.primary.opacity(0.08)
+        if chosen { return Color.yellow }
+        return Color.primary.opacity(0.08)
+    }
+
+    private var borderWidth: CGFloat {
+        if chosen { return 2 }
+        return 1
+    }
+
+    private var symbol: String {
+        if chosen { return "checkmark.circle.fill" }
+        return "chevron.right"
+    }
+
+    private var symbolColor: Color {
+        if chosen { return Color.yellow }
+        return Color.secondary
     }
 
     var body: some View {
@@ -611,6 +678,8 @@ private struct HeirloomTile: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(heirloom.title)
                     .font(.headline)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(heirloom.blurb)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -618,38 +687,73 @@ private struct HeirloomTile: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 4)
-            Image(systemName: chosen ? "checkmark.circle.fill" : "chevron.right")
+            Image(systemName: symbol)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(chosen ? Color.yellow : Color.secondary)
+                .foregroundStyle(symbolColor)
         }
         .foregroundStyle(Color.primary)
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(borderColor, lineWidth: chosen ? 2 : 1)
+                .strokeBorder(borderColor, lineWidth: borderWidth)
         }
     }
 }
 
+/// "A life in chapters", collapsed by default so the decision above stays in view.
 private struct TimelineCard: View {
     let history: [HistoryEntry]
+    @Binding var isExpanded: Bool
+
+    private var countText: String {
+        if history.count == 1 { return "1 chapter" }
+        return String(history.count) + " chapters"
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            CardHeading(text: "A life in chapters")
-            if history.isEmpty {
-                Text("The years drifted by, quietly.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            entries
+                .padding(.top, 12)
+        } label: {
+            headerLabel
+        }
+        .tint(Stage.dusk.palette.accent)
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    /// The DisclosureGroup itself toggles on tap; no inner Button, so a tap can't toggle twice.
+    private var headerLabel: some View {
+        HStack(spacing: 8) {
+            Text("A life in chapters")
+                .font(.headline)
+                .foregroundStyle(Color.primary)
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 8)
+            Text(countText)
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var entries: some View {
+        if history.isEmpty {
+            Text("The years drifted by, quietly.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
                 ForEach(history) { entry in
                     TimelineLine(entry: entry)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 

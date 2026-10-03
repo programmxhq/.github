@@ -3,12 +3,17 @@ import SwiftUI
 struct StartView: View {
     @Environment(GameStore.self) private var store
 
+    /// 1 = "Who are you?", 2 = "What do you want from life?"
+    @State private var step: Int = 1
     @State private var name: String = ""
     @State private var ambition: Ambition = Ambition.allCases.first ?? .fortune
-    @State private var showSeed = false
-    @State private var seedText = ""
+    @State private var showSeed: Bool = false
+    @State private var seedText: String = ""
     @State private var sheet: StartSheet?
+    @State private var confirmDaily: Bool = false
     @FocusState private var nameFocused: Bool
+
+    private let stepCount: Int = 2
 
     private var accent: Color { Stage.dawn.palette.accent }
 
@@ -17,31 +22,27 @@ struct StartView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                titleBlock
-                nameSection
-                traitSection
-                if let heirloom = store.pendingHeirloom {
-                    InheritanceCard(heirloom: heirloom, parentName: heirParentName)
-                }
-                DailyCard(dayKey: store.todayKey, best: store.todayBest, accent: accent) {
-                    startDaily()
-                }
-                ambitionSection
-                seedSection
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 24)
+        VStack(spacing: 0) {
+            topBar
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+            stepContainer
         }
-        .scrollIndicators(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom) { bornBar }
+        .safeAreaInset(edge: .bottom) { bottomBar }
         .background { StageBackground(stage: .dawn) }
         .fontDesign(.rounded)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .sheet(item: $sheet) { which in
             sheetContent(which)
+        }
+        .confirmationDialog("Play today's life?", isPresented: $confirmDaily, titleVisibility: .visible) {
+            Button("Play today's life") {
+                startDaily()
+            }
+            Button("Not now", role: .cancel) {}
+        } message: {
+            Text(dailyMessage)
         }
         .onAppear {
             if name.isEmpty { name = store.suggestedName }
@@ -89,43 +90,21 @@ struct StartView: View {
         }
     }
 
-    // MARK: Title
+    // MARK: Top bar (both steps)
 
-    private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            toolbarRow
-            titleRow
-        }
-    }
-
-    private var toolbarRow: some View {
+    private var topBar: some View {
         HStack(spacing: 10) {
+            DailyButton(best: store.todayBest) {
+                nameFocused = false
+                confirmDaily = true
+            }
+            .layoutPriority(1)
             Spacer(minLength: 0)
             achievementsButton
             if !store.lineage.isEmpty {
                 familyButton
             }
             trophyButton
-        }
-    }
-
-    private var titleRow: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("DEALT")
-                    .font(.system(size: 46, weight: .heavy, design: .rounded))
-                    .tracking(6)
-                Text("Life deals you three cards. Play one.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(lineageText)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(accent)
-                    .padding(.top, 2)
-            }
-            Spacer(minLength: 8)
-            DecorFan()
-                .padding(.top, 8)
         }
     }
 
@@ -147,7 +126,93 @@ struct StartView: View {
         }
     }
 
-    // MARK: Name
+    private var dailyMessage: String {
+        let intro: String = "Everyone plays the same life today, from the same first hand."
+        let apart: String = "It stands apart from your family: your line, generation and inheritance wait here untouched."
+        var text: String = intro + " " + apart
+        if let best = store.todayBest {
+            text += " Your best today: " + String(best) + "."
+        }
+        return text
+    }
+
+    // MARK: Steps
+
+    /// Step 1 leaves and enters on the leading edge, step 2 on the trailing edge,
+    /// so the slide direction is right both ways without extra state.
+    private var stepOneTransition: AnyTransition {
+        AnyTransition.move(edge: .leading).combined(with: .opacity)
+    }
+
+    private var stepTwoTransition: AnyTransition {
+        AnyTransition.move(edge: .trailing).combined(with: .opacity)
+    }
+
+    private var stepContainer: some View {
+        ZStack {
+            if step == 1 {
+                stepOne
+                    .transition(stepOneTransition)
+            } else {
+                stepTwo
+                    .transition(stepTwoTransition)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func goToStep(_ target: Int) {
+        guard target != step else { return }
+        nameFocused = false
+        Haptic.tap()
+        withAnimation(.dealtSpring) {
+            step = target
+        }
+    }
+
+    // MARK: Step 1 — Who are you?
+
+    private var stepOne: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                titleRow
+                StepHeading(title: "Who are you?",
+                            subtitle: "Pick a name. Your birth trait is luck of the draw.")
+                nameSection
+                traitSection
+                if let heirloom = store.pendingHeirloom {
+                    InheritanceCard(heirloom: heirloom, parentName: heirParentName)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var titleRow: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("DEALT")
+                    .font(.system(size: 46, weight: .heavy, design: .rounded))
+                    .tracking(6)
+                Text("Life deals you three cards. Play one.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(lineageText)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+            Spacer(minLength: 8)
+            DecorFan()
+                .padding(.top, 8)
+        }
+    }
 
     private var nameSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -163,6 +228,7 @@ struct StartView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .layoutPriority(1)
                 Button {
                     Haptic.tap()
@@ -171,7 +237,7 @@ struct StartView: View {
                 } label: {
                     Text("🎲")
                         .font(.title2)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
                         .background(accent.opacity(0.15), in: Circle())
                 }
                 .accessibilityLabel("Random name")
@@ -183,10 +249,8 @@ struct StartView: View {
         }
     }
 
-    // MARK: Birth trait
-
     private var traitSection: some View {
-        let def = store.birthTraitPreview.def
+        let def: TraitDef = store.birthTraitPreview.def
         return VStack(alignment: .leading, spacing: 8) {
             SectionLabel(text: "Born with")
             Button {
@@ -201,6 +265,8 @@ struct StartView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(def.name)
                             .font(.headline)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                         Text(def.blurb)
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -222,47 +288,94 @@ struct StartView: View {
         }
     }
 
-    // MARK: Ambition
+    // MARK: Step 2 — What do you want from life?
 
-    private var ambitionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Ambition")
-            ScrollView(.horizontal) {
-                HStack(spacing: 12) {
-                    ForEach(Ambition.allCases, id: \.self) { item in
-                        ambitionButton(item)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+    private var stepTwo: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                backButton
+                StepHeading(title: "What do you want from life?",
+                            subtitle: "Your ambition shapes the cards you're dealt and most of your score.")
+                ambitionGrid
+                ambitionBlurb
+                seedSection
             }
-            .scrollIndicators(.hidden)
-            .padding(.horizontal, -16)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+    }
 
-            Text(ambition.def.blurb)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .id(ambition)
-                .transition(.opacity)
+    private var backButton: some View {
+        Button {
+            goToStep(1)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.left")
+                    .font(.subheadline.weight(.bold))
+                Text("Who are you?")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(accent)
+            .padding(.vertical, 8)
+            .padding(.trailing, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityLabel("Back")
+        .accessibilityHint("Return to name and birth trait")
+    }
+
+    private var gridColumns: [GridItem] {
+        [GridItem(.flexible(), spacing: 12, alignment: .top),
+         GridItem(.flexible(), spacing: 12, alignment: .top)]
+    }
+
+    private var ambitionGrid: some View {
+        LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 12) {
+            ForEach(Ambition.allCases, id: \.self) { item in
+                ambitionButton(item)
+            }
         }
     }
 
     private func ambitionButton(_ item: Ambition) -> some View {
         let unlocked: Bool = store.isUnlocked(item)
+        let isSelected: Bool = unlocked && item == ambition
         return Button {
             guard unlocked else { return }
             Haptic.tap()
-            withAnimation(.spring(duration: 0.3, bounce: 0.3)) { ambition = item }
+            withAnimation(.dealtSpring) { ambition = item }
         } label: {
-            AmbitionTile(ambition: item, selected: unlocked && item == ambition,
-                         locked: !unlocked, accent: accent)
+            AmbitionTile(ambition: item, selected: isSelected, locked: !unlocked, accent: accent)
         }
         .buttonStyle(PressableStyle())
         .disabled(!unlocked)
     }
 
-    // MARK: Seed
+    private var ambitionBlurb: some View {
+        let def: AmbitionDef = ambition.def
+        return HStack(alignment: .top, spacing: 12) {
+            Text(def.emoji)
+                .font(.title2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(def.name)
+                    .font(.headline)
+                Text(def.blurb)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .id(ambition)
+        .transition(.opacity)
+    }
 
     private var seedSection: some View {
         VStack(alignment: .trailing, spacing: 8) {
@@ -271,10 +384,12 @@ struct StartView: View {
                 Button {
                     withAnimation(.snappy) { showSeed.toggle() }
                 } label: {
-                    Image(systemName: "gearshape")
+                    Label("Advanced", systemImage: "gearshape")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.tertiary)
-                        .frame(width: 32, height: 32)
+                        .padding(.vertical, 8)
+                        .padding(.leading, 8)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Advanced options")
             }
@@ -293,11 +408,12 @@ struct StartView: View {
         }
     }
 
-    // MARK: Be born
+    // MARK: Bottom bar
 
-    private var bornBar: some View {
-        PrimaryButton(title: "Be born", tint: accent) {
-            beBorn()
+    private var bottomBar: some View {
+        VStack(spacing: 10) {
+            StepIndicator(step: step, total: stepCount, accent: accent)
+            primaryAction
         }
         .padding(.horizontal, 16)
         .padding(.top, 10)
@@ -309,6 +425,21 @@ struct StartView: View {
                 .ignoresSafeArea()
         }
     }
+
+    @ViewBuilder
+    private var primaryAction: some View {
+        if step == 1 {
+            PrimaryButton(title: "Next: choose an ambition", tint: accent) {
+                goToStep(2)
+            }
+        } else {
+            PrimaryButton(title: "Be born", tint: accent) {
+                beBorn()
+            }
+        }
+    }
+
+    // MARK: Actions
 
     private func startDaily() {
         nameFocused = false
@@ -344,6 +475,60 @@ private struct SectionLabel: View {
     }
 }
 
+/// The big question at the top of each step.
+private struct StepHeading: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.title2.weight(.bold))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// Dots plus "1 of 2".
+private struct StepIndicator: View {
+    let step: Int
+    let total: Int
+    let accent: Color
+
+    private func dotColor(_ index: Int) -> Color {
+        if index == step { return accent }
+        return Color.primary.opacity(0.18)
+    }
+
+    private func dotWidth(_ index: Int) -> CGFloat {
+        if index == step { return 18 }
+        return 7
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(1...total, id: \.self) { index in
+                Capsule()
+                    .fill(dotColor(index))
+                    .frame(width: dotWidth(index), height: 7)
+            }
+            Text(String(step) + " of " + String(total))
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+        }
+        .animation(.dealtSpring, value: step)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Step " + String(step) + " of " + String(total))
+    }
+}
+
 /// Three tiny fanned cards next to the title.
 private struct DecorFan: View {
     let faces: [String] = ["🌱", "🎲", "🕯️"]
@@ -368,53 +553,105 @@ private struct DecorFan: View {
     }
 }
 
+/// One ambition in the 2-column grid. Grows with Dynamic Type instead of clipping.
 private struct AmbitionTile: View {
     let ambition: Ambition
     let selected: Bool
     let locked: Bool
     let accent: Color
 
+    /// Not private: a private stored property would make the memberwise init private.
+    @ScaledMetric(relativeTo: .caption) var minTileHeight: CGFloat = 112
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+    }
+
     private var borderColor: Color {
-        selected ? accent : Color.primary.opacity(0.08)
+        if selected { return accent }
+        return Color.primary.opacity(0.08)
+    }
+
+    private var borderWidth: CGFloat {
+        if selected { return 2.5 }
+        return 1
+    }
+
+    private var fillTint: Color {
+        if selected { return accent.opacity(0.14) }
+        return Color.clear
+    }
+
+    private var shadowColor: Color {
+        if selected { return accent.opacity(0.25) }
+        return Color.clear
     }
 
     private var emojiOpacity: Double { locked ? 0.35 : 1 }
     private var emojiGrayscale: Double { locked ? 1 : 0 }
     private var nameColor: Color { locked ? Color.secondary : Color.primary }
-    private var hintText: String { locked ? lockHint : "" }
 
-    /// "🔒 Dynasty: Reach the third generation." for a locked ambition.
+    private var selectedTraits: AccessibilityTraits {
+        if selected { return .isSelected }
+        return []
+    }
+
+    /// "Earn Dynasty: Reach the third generation." for a locked ambition.
     private var lockHint: String {
-        guard let needed = ambition.unlockedBy else { return "🔒 Locked" }
-        return "🔒 " + needed.name + ": " + needed.detail
+        guard let needed = ambition.unlockedBy else { return "Locked" }
+        let firstSentence: String = needed.detail.components(separatedBy: ". ").first ?? needed.detail
+        let trimmed: String = firstSentence.hasSuffix(".") ? firstSentence : firstSentence + "."
+        return "Earn " + needed.name + ": " + trimmed
     }
 
     var body: some View {
-        let def = ambition.def
+        let def: AmbitionDef = ambition.def
         return VStack(alignment: .leading, spacing: 6) {
-            Text(def.emoji)
-                .font(.system(size: 34))
-                .grayscale(emojiGrayscale)
-                .opacity(emojiOpacity)
+            HStack(alignment: .top, spacing: 4) {
+                Text(def.emoji)
+                    .font(.system(size: 32))
+                    .grayscale(emojiGrayscale)
+                    .opacity(emojiOpacity)
+                Spacer(minLength: 0)
+                statusBadge
+            }
             Text(def.name)
                 .font(.headline)
                 .foregroundStyle(nameColor)
-                .lineLimit(1)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
             detailText(def)
-            Spacer(minLength: 0)
         }
         .foregroundStyle(Color.primary)
-        .frame(width: 136, height: 150, alignment: .topLeading)
-        .padding(14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(borderColor, lineWidth: selected ? 2.5 : 1)
+        .frame(maxWidth: .infinity, minHeight: minTileHeight, alignment: .topLeading)
+        .padding(12)
+        .background {
+            ZStack {
+                shape.fill(.regularMaterial)
+                shape.fill(fillTint)
+            }
         }
-        .shadow(color: selected ? accent.opacity(0.25) : Color.clear, radius: 10, x: 0, y: 4)
-        .scaleEffect(selected ? 1.04 : 1)
+        .overlay {
+            shape.strokeBorder(borderColor, lineWidth: borderWidth)
+        }
+        .shadow(color: shadowColor, radius: 8, x: 0, y: 3)
+        .contentShape(shape)
         .accessibilityElement(children: .combine)
-        .accessibilityHint(hintText)
+        .accessibilityAddTraits(selectedTraits)
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        if locked {
+            Text("🔒")
+                .font(.subheadline)
+                .accessibilityLabel("Locked")
+        } else if selected {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(accent)
+                .accessibilityHidden(true)
+        }
     }
 
     @ViewBuilder
@@ -424,14 +661,13 @@ private struct AmbitionTile: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
-                .lineLimit(5)
-                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
         } else {
             Text(def.goalText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
-                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -456,6 +692,7 @@ private struct InheritanceCard: View {
                     }
                     Text(heirloom.title)
                         .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(heirloom.blurb)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -493,7 +730,7 @@ private struct ToolbarCircleButton: View {
             action()
         } label: {
             Image(systemName: symbol)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(color)
                 .frame(width: 44, height: 44)
                 .background(.regularMaterial, in: Circle())
@@ -502,66 +739,41 @@ private struct ToolbarCircleButton: View {
     }
 }
 
-/// The Daily Challenge: one seeded life per day, outside the family line.
-private struct DailyCard: View {
-    let dayKey: String
+/// The compact Daily Challenge entry in the top bar: "📅 Daily · Best 512".
+private struct DailyButton: View {
     let best: Int?
-    let accent: Color
-    let onPlay: () -> Void
+    let action: () -> Void
 
-    private var bestText: String {
-        if let b = best { return "Best: " + String(b) }
-        return "Not played yet"
+    private var title: String {
+        if let b = best { return "📅 Daily · Best " + String(b) }
+        return "📅 Daily"
+    }
+
+    private var spokenLabel: String {
+        if let b = best { return "Daily challenge, today's best " + String(b) }
+        return "Daily challenge"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Daily Challenge")
-            VStack(alignment: .leading, spacing: 12) {
-                header
-                playButton
-            }
-            .padding(12)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(Color.orange.opacity(0.45), lineWidth: 1.5)
-            }
-        }
-    }
-
-    private var header: some View {
-        HStack(spacing: 14) {
-            Text("📅")
-                .font(.system(size: 34))
-                .frame(width: 52, height: 52)
-                .background(Color.orange.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Today's life")
-                    .font(.headline)
-                Text(dayKey)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Text(bestText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(best == nil ? Color.secondary : Color.orange)
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var playButton: some View {
         Button {
-            onPlay()
+            Haptic.tap()
+            action()
         } label: {
-            Text("Play today's life")
+            Text(title)
                 .font(.subheadline.weight(.bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(Color.orange)
-                .background(Color.orange.opacity(0.15), in: Capsule())
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(.regularMaterial, in: Capsule())
+                .overlay {
+                    Capsule().strokeBorder(Color.orange.opacity(0.45), lineWidth: 1)
+                }
         }
         .buttonStyle(PressableStyle())
+        .accessibilityLabel(spokenLabel)
         .accessibilityHint("Same life for every player today. Does not affect your family.")
     }
 }
