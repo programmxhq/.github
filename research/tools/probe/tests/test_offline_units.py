@@ -184,3 +184,20 @@ def test_host_is_redacted(tmp_path):
     load_credentials(env={"DECODO_USER": "hU", "DECODO_PASS": "hPass77", "DECODO_HOST": "gw.example-proxy.test:7000"},
                      dotenv_path=tmp_path / "none")
     assert "gw.example-proxy.test" not in REDACTOR.redact("connect timeout to gw.example-proxy.test:7000")
+
+
+def test_per_host_folds_www_and_excludes_errors():
+    from probe.runner import per_host
+
+    def rec(url, outcome, nbytes, rows, antibot=()):
+        return {"url": url, "outcome": outcome, "bytes_wire_total": nbytes, "rows": rows, "antibot": list(antibot)}
+    prox = [rec("https://www.a.com/1", "ok", 1000, 10), rec("https://a.com/2", "error", 500, 0),
+            rec("https://www.a.com/3", "challenge", 1500, 0, ["cloudflare"]),
+            rec("https://b.org/x", "ok", 2000, 4)]
+    ph = per_host(prox, 4.0)
+    assert set(ph) == {"a.com", "b.org"}
+    a = ph["a.com"]
+    assert a["requests"] == 3 and a["ok"] == 1 and a["block_rate"] == 0.5  # 1 block / 2 responded
+    assert a["bytes"] == 3000 and a["rows"] == 10 and a["bytes_per_row"] == 300.0
+    assert a["cost_per_1k_rows_usd"] == round(300 * 1000 / 1e9 * 4.0, 5) and a["antibot_vendors"] == ["cloudflare"]
+    assert ph["b.org"]["block_rate"] == 0 and ph["b.org"]["bytes_per_row"] == 500.0

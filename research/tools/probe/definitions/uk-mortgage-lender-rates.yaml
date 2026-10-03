@@ -15,9 +15,10 @@
 # How rows are counted (read before trusting rows/request):
 #   The harness supports one `extract` spec. Because no rate table's markup has been seen yet,
 #   `extract` is the ROBUST MARKER: distinct interest-rate strings ("4.69%") per page, counted
-#   once each via a negative lookahead. This is a LOWER bound on product rows (two products that
-#   share a rate count once) plus a few non-product rates (SVR, base rate), so cost/row is on the
-#   conservative side. `extract_precise` below is NOT read by the harness; it is the table-row
+#   once each via a negative lookahead. This is APPROXIMATE, not a strict lower bound: two
+#   products that share a rate count once (under-count), but SVR, base rate and any 2-dp APRC
+#   figure ("6.94% APRC") count as extra rows (over-count, up to ~2x if every APRC has 2 dp).
+#   REVIEW 2026-10-03: compare against `table tbody tr` on the first live response. `extract_precise` below is NOT read by the harness; it is the table-row
 #   selector to switch to once the first live response shows the markup.
 #
 # Pages flagged CALCULATOR: search summaries say these show rates only after a form
@@ -27,8 +28,8 @@ name: uk-mortgage-lender-rates
 candidate_ref: "research/reviews/desk_review.md#4 rank 1; research/desk/CANDIDATES.md row 3 / S3"
 public_only: true
 notes: >-
-  Daily-diff monitor of direct-lender rate tables. 30 requests over 25 URLs from 8 lenders
-  (HSBC, NatWest, Halifax, Lloyds, Barclays, Santander, Coventry BS, Nationwide). The 5
+  Daily-diff monitor of direct-lender rate tables. 30 requests over 23 distinct URLs from 8
+  lenders (HSBC, NatWest, Halifax, Lloyds, Barclays, Santander, Coventry BS, Nationwide). The 7
   table pages most likely to be static are requested twice to mimic a repeat poll.
   Tests: server-rendered vs JS tables, anti-bot per lender, bytes per rate row.
 urls:
@@ -76,7 +77,11 @@ headers:
 # ROBUST MARKER (used by the harness): distinct rate strings like 4.69% / 4.69 % / 4.69&nbsp;%.
 extract:
   type: regex
-  pattern: '(\b\d{1,2}\.\d{2})(?:\s|&nbsp;)?%(?![\s\S]*?\b\1(?:\s|&nbsp;)?%)'
+  # Up to 3 tags/spaces may sit between number and % (e.g. <span>4.69</span><span>%</span>).
+  # (?<![\d.]) stops "14.69" or "1.4.69" from yielding "4.69". REVIEW 2026-10-03: was \b-anchored
+  # and gave 0 on split-span markup.
+  pattern: '(?<![\d.])(\d{1,2}\.\d{2})(?:\s|&nbsp;|<[^<>]{0,100}>){0,3}%'
+  distinct: true   # count each distinct group-1 id once (linear; replaces the quadratic dedupe lookahead)
 # NOT read by the harness. Switch `extract` to this after the first live response. UNVERIFIED.
 extract_precise:
   type: css

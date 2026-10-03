@@ -49,8 +49,8 @@ Exit codes: 0 ok, 2 bad definition or missing creds, 3 refused by budget, 4 cap 
 | Path | Contents |
 |---|---|
 | `research/probes/<name>/results.jsonl` | One line per request, appended per run (`run_id`): status, outcome, rows, vendors and signals, wire/HTTP/body bytes, latency, redacted error. No credentials; the sticky `session_id` is random. |
-| `research/probes/<name>/summary.json` | Latest run: block/error/success rates, vendors, median and p90 bytes/request, rows/request, bytes/row, cost per 1k rows for every price tier, verdict and reasons, baseline. |
-| `research/probes/PROBES.md` | One row per candidate (latest run), regenerated on every run. |
+| `research/probes/<name>/summary.json` | Latest run: block/error/success rates, vendors, median and p90 bytes/request, rows/request, bytes/row, cost per 1k rows for every price tier, verdict and reasons, baseline, and `per_host` (requests, ok, block rate, rows, bytes, bytes/row, cost/1k rows per requested host, `www.` folded). |
+| `research/probes/PROBES.md` | One row per candidate (latest run), plus a per-host breakdown table for multi-host definitions; regenerated on every run and by `report`. |
 | `research/probes/traffic_ledger.json` | Cumulative Decodo bytes, per probe and per run. Commit it. Never hand-edit it to free budget. |
 | `research/logs/probe-agent.md` | `probe-runner` start/end rows per run. |
 

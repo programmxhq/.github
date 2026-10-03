@@ -4,6 +4,12 @@
 #   * Neither site's robots.txt or T&Cs surfaced in search. Check
 #     https://www.currys.co.uk/robots.txt and https://www.screwfix.com/robots.txt by hand before the
 #     run; drop any URL family they disallow (faceted ?brand= filters are a common disallow).
+#     REVIEW 2026-10-03 (WebSearch summaries, file not read in full): currys.co.uk/robots.txt
+#     disallows search, cart, account registration, wishlist, checkout and the prefn=/pmin=/pmax=
+#     refinement params; none of the Currys URLs below uses those (?start=&sz= not seen either way).
+#     The only "Screwfix" robots.txt that surfaced is shop.screwfix.eu (a different site: it
+#     disallows /search, /policies/). screwfix.com robots.txt is still unseen; the 6 faceted
+#     ?brand=/?powersupply=/?powervoltagesupply= URLs are the first to drop if it disallows them.
 #   * Retail T&Cs commonly forbid automated access; price/stock facts for a monitor are lower risk
 #     than copying descriptions or images. Legal check before launch.
 #   * Anti-bot: Argos (same market) is behind Akamai per an incumbent README; Currys and Screwfix
@@ -64,7 +70,11 @@ headers:
 # ROBUST MARKER (used by the harness): distinct product ids in Screwfix /p/ links or Currys /products/ links.
 extract:
   type: regex
-  pattern: '(/p/[a-z0-9-]+/[0-9a-z]{4,6}(?=[/"?#&\\])|/products/[a-z0-9-]+-\d{5,}\.html)(?![\s\S]*?\1)'
+  # REVIEW 2026-10-03: Currys slugs contain dots (".../acer-aspire-go-15-15.6-laptop-...-10284802.html",
+  # confirmed in search), so the slug class now allows "." and "%"; the dedupe lookahead now needs a
+  # boundary after \1 so "/p/x/3738" is not swallowed by a later "/p/x/37381".
+  pattern: '(/p/[a-z0-9-]+/[0-9a-z]{4,6}(?=[/"''?#&\\<\s])|/products/[A-Za-z0-9.%-]+-\d{5,}\.html)'
+  distinct: true   # count each distinct group-1 id once (linear; replaces the quadratic dedupe lookahead)
 # NOT read by the harness; switch after the first live response. All UNVERIFIED.
 extract_precise:
   currys:

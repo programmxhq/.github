@@ -151,6 +151,29 @@ def _pct(xs, q):
     return xs[min(len(xs) - 1, int(round(q * (len(xs) - 1))))]
 
 
+def _host(url: str) -> str:
+    h = (urlsplit(url).hostname or "?").lower()
+    return h[4:] if h.startswith("www.") else h
+
+
+def per_host(prox: list[dict], usd_per_gb: float) -> dict:
+    """Split one run's proxied records by requested host (the definition URL, not final_url).
+    Same formulas as the run totals: block rate excludes errors; bytes/row = all bytes / ok rows."""
+    out = {}
+    for h in sorted({_host(r["url"]) for r in prox}):
+        rs = [r for r in prox if _host(r["url"]) == h]
+        oc = Counter(r["outcome"] for r in rs)
+        responded = len(rs) - oc.get("error", 0)
+        nbytes, nrows = sum(r["bytes_wire_total"] for r in rs), sum(r["rows"] for r in rs)
+        bpr = nbytes / nrows if nrows else None
+        out[h] = {"requests": len(rs), "ok": oc.get("ok", 0), "outcomes": dict(oc),
+                  "block_rate": round(sum(oc.get(o, 0) for o in C.BLOCK_OUTCOMES) / responded, 4) if responded else None,
+                  "rows": nrows, "bytes": nbytes, "bytes_per_row": round(bpr, 1) if bpr else None,
+                  "cost_per_1k_rows_usd": round(bpr * 1000 / 1e9 * usd_per_gb, 5) if bpr else None,
+                  "antibot_vendors": sorted({v for r in rs for v in r["antibot"]})}
+    return out
+
+
 def summarize(defn: ProbeDefinition, cfg: dict, records: list[dict], meta: dict) -> dict:
     prox = [r for r in records if r["mode"] == "proxy"]
     base = [r for r in records if r["mode"] == "direct"]
@@ -219,6 +242,7 @@ def summarize(defn: ProbeDefinition, cfg: dict, records: list[dict], meta: dict)
         "price_usd_per_gb": prices[primary], "price_verified": bool(cfg["pricing"].get("verified")),
         "median_latency_ms": _median([r["elapsed_ms"] for r in prox if not r["error_kind"]]),
         "verdict": verdict, "verdict_reasons": kill, "thresholds": v, "notes": notes + defn.warnings,
+        "per_host": per_host(prox, prices[primary]),
         "baseline": {
             "requests": len(base), "outcomes": dict(Counter(r["outcome"] for r in base)),
             "statuses": [r["status"] for r in base],
@@ -245,7 +269,7 @@ def write_probes_md(cfg: dict, repo_root: Path = REPO_ROOT) -> Path:
     ledger = Ledger(cfg_path(cfg, "ledger", repo_root), cfg["budget"]["cap_bytes"])
     ledger.init()
     snap = ledger.snapshot()
-    rows = []
+    rows, host_rows = [], []
     for sp in sorted(probes_dir.glob("*/summary.json")):
         s = json.loads(sp.read_text(encoding="utf-8"))
         pk = s.get("price_primary")
@@ -261,7 +285,20 @@ def write_probes_md(cfg: dict, repo_root: Path = REPO_ROOT) -> Path:
             f"{s.get('rows_per_request') if s.get('rows_per_request') is not None else '-'} | "
             f"{_fmt_bytes(s.get('bytes_per_row'))} | {'-' if c is None else f'${c:.4f}'} | **{s['verdict']}** | "
             f"{'; '.join(s.get('verdict_reasons') or []) or '-'} |")
+        hosts = s.get("per_host") or {}
+        for h, x in hosts.items() if len(hosts) > 1 else ():
+            hb, hc = x.get("block_rate"), x.get("cost_per_1k_rows_usd")
+            host_rows.append(
+                f"| {s['name']} | {h} | {x['requests']} | {x['ok']} | {'-' if hb is None else f'{hb:.0%}'} | "
+                f"{', '.join(x.get('antibot_vendors') or []) or 'none'} | {x['rows']} | {_fmt_bytes(x['bytes'])} | "
+                f"{_fmt_bytes(x.get('bytes_per_row'))} | {'-' if hc is None else f'${hc:.4f}'} |")
     price = cfg["pricing"]["usd_per_gb"][cfg["pricing"]["primary"]]
+    if host_rows:
+        host_rows = ["## Per-host breakdown (multi-host candidates)", "",
+                     "The verdict above blends every host in a definition. Same formulas, split by requested host "
+                     "(`www.` folded); a candidate can survive with one host dropped.", "",
+                     "| Candidate | Host | Req | OK | Block rate | Anti-bot | Rows | Bytes | B/row | $/1k rows |",
+                     "|---|---|---|---|---|---|---|---|---|---|", *host_rows, ""]
     text = [
         "# Phase 5 reachability probes (Decodo residential)",
         "",
@@ -278,6 +315,7 @@ def write_probes_md(cfg: dict, repo_root: Path = REPO_ROOT) -> Path:
         "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
         *rows,
         "",
+        *host_rows,
     ]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(text), encoding="utf-8")

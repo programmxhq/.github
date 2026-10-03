@@ -109,7 +109,17 @@ def extract(body: bytes, spec: dict, content_type: str = "") -> tuple[int, list,
                     sample.append(_short(n.text(strip=True)))
             return len(nodes), sample, None
         if kind == "regex":
-            found = re.findall(spec["pattern"], body.decode("utf-8", "replace"))
+            rx = re.compile(spec["pattern"])
+            text = body.decode("utf-8", "replace")
+            if spec.get("distinct"):
+                # Count each distinct id once (group 1 if the pattern has a group). Linear time, unlike a
+                # "(?![\s\S]*?\1)" dedupe lookahead, which is quadratic on large pages.
+                seen: dict[str, None] = {}
+                for m in rx.finditer(text):
+                    seen.setdefault(m.group(1) if rx.groups else m.group(0), None)
+                found = list(seen)
+            else:
+                found = rx.findall(text)
             return len(found), [_short(x) for x in found[:SAMPLE_ROWS]], None
         raise ExtractError(f"unknown extract type {kind!r}")
     except ExtractError as e:

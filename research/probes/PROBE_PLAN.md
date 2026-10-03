@@ -32,12 +32,18 @@ leaves roughly 400 MB of headroom.
   product that appears three times (card, link and embedded JSON) counts once. That makes rows a
   lower bound, so cost/1k rows errs high, which is the safe direction. Each file also has an
   `extract_precise` block, which the harness ignores. It holds the CSS/JSON selector to switch to
-  once the markup has been seen. Unit check: each regex was run on synthetic bodies and gave the
-  intended counts. The worst-case speed is about 4 s for a 1.5 MB page.
+  once the markup has been seen. Unit check: `probe/tests/test_definition_markers.py` runs each
+  definition's marker on realistic snippets (id in two hrefs + data attribute + embedded JSON
+  counts once). REVIEW 2026-10-03: the dedupe lookahead is quadratic: measured 3-10 s for a
+  1.2 MB page with 100-800 ids near the top (CPU only, no extra bytes); a 3 MB body could take
+  ~25-60 s of extraction time per request.
 - **Mixed hosts, one verdict.** Each candidate bundles 2-8 hosts in one definition, so the
-  harness verdict is a blend of all of them. Before reading PASS or KILL, group
-  `results.jsonl` by host (the `url` field) and compute the block rate and bytes/row per host.
-  A candidate can survive with one host dropped, as Argos was.
+  harness verdict is a blend of all of them. Since review 2026-10-03 each `summary.json` carries
+  `per_host` (requests, ok, block rate, rows, bytes, bytes/row, cost/1k rows, vendors per
+  requested host, `www.` folded) and PROBES.md prints a "Per-host breakdown" table under the main
+  one. Read it before accepting PASS or KILL. A candidate can survive with one host dropped, as
+  Argos was. Per-host figures cover the latest run only; for a host split across runs use
+  `jq -r 'select(.mode=="proxy") | [(.url|split("/")[2]), .outcome, .rows, .bytes_wire_total] | @tsv' results.jsonl`.
 - **`empty` is ambiguous.** It counts towards the block rate, but it can mean any of four things:
   a soft block, a JS-only page, a marker that does not match, or a geo redirect. Check
   `final_url`, the status, and the `signals`/vendor fields before calling it a block.
@@ -52,7 +58,11 @@ leaves roughly 400 MB of headroom.
   unproxied client sees.
 - **robots.txt.** Lulu's robots.txt is the only one that surfaced in search (it disallows search,
   cart, checkout and my-account). Fetch the others by hand in the live session before running,
-  and delete any URL family they disallow.
+  and delete any URL family they disallow. REVIEW 2026-10-03: the Lulu file is for
+  `www.luluhypermarket.com`; the probe uses `gcc.luluhypermarket.com`, whose robots.txt is unseen.
+  Currys' robots.txt (search summary) disallows search, cart, account registration, wishlist,
+  checkout and `prefn=`/`pmin=`/`pmax=`; no probe URL uses them. The Screwfix robots.txt that
+  surfaced is `shop.screwfix.eu`, a different site; `screwfix.com`'s is unseen.
 
 ## Global PASS / KILL (config.yaml `verdict`)
 
@@ -71,7 +81,7 @@ leaves roughly 400 MB of headroom.
 **What is tested.** Whether direct-lender rate tables can be fetched with a plain HTTP client
 through residential IPs, and whether they are server-rendered. The probe covers 8 lenders:
 HSBC, NatWest, Halifax, Lloyds, Barclays, Santander, Coventry BS and Nationwide. It requests
-25 distinct URLs, 5 of them twice to mimic a repeat poll. It also measures what one rate row
+23 distinct URLs, 7 of them twice to mimic a repeat poll. It also measures what one rate row
 costs in bytes.
 
 **Row marker.** Distinct rate strings (`4.69%`) per page, with `min_rows: 3`. A page that only
@@ -121,7 +131,7 @@ Note: KILL on cost is very unlikely here.
 `carrefouruae.com/mafuae/en` return product tiles to a plain HTTP client from non-UAE
 residential IPs, and at what bytes per product. The probe covers:
 
-- 22 UAE URLs plus 4 other GCC URLs (Lulu KSA, KW, QA and BH).
+- 26 UAE URLs plus 4 other GCC URLs (Lulu KSA, KW, QA and BH).
 - 24 category pages and 6 product pages.
 
 **Row marker.** Distinct `/p/<digits>` product ids. On product pages, related-product links
@@ -168,7 +178,9 @@ $0.05/1k.
 search, so none is probed.
 
 **Row marker.** Distinct Screwfix `/p/<slug>/<code>` links and Currys
-`/products/<slug>-<digits>.html` links. The Currys pattern is UNVERIFIED.
+`/products/<slug>-<digits>.html` links. REVIEW 2026-10-03: the Currys shape is confirmed in search
+(`/products/acer-aspire-go-15-15.6-laptop-...-10284802.html`); slugs contain dots, which the
+original regex missed (0 rows on most laptop tiles). Fixed.
 
 **PASS means** the block rate is at most 20% on each host and tiles are visible in the HTML.
 Expected cost is about 300 KB / 20 tiles = 15 KB/row, or $0.06/1k.
@@ -263,6 +275,12 @@ to the monitor shape. Under the desk rubric, H drops from 3 to about 1-2 for Bay
 Naukrigulf. Rozee (4) is the thinnest leg. Re-score before investing build time, whatever the
 probe verdict.
 
+REVIEW (review-agent:probe-defs, 2026-10-03): agreed. With 8 + 7 incumbents on the two GCC boards,
+H for this candidate is re-scored in `research/reviews/desk_review.md` (REVIEW line under
+section 4): a re-search adds jobscrawler, blackfalcondata and piotrv1001 on Bayt (11 -> H = 1 for that leg) and bovi, blackfalcondata on
+Naukrigulf (9 -> H = 2). Bundle H = 2, total 48.5 -> 47.0. The probe is cheap (5.6 MB projected), so it stays in the run order, but a PASS does
+not make it a build candidate unless the re-scored H still ranks it.
+
 **ToS / legal.** robots.txt was not seen for any board. The Rozee `/job/jsearch/` URLs are
 search-style and the first to drop if they are disallowed. Job-board T&Cs usually forbid
 republishing listings, so the output should be new-posting facts plus a link, not full
@@ -283,7 +301,8 @@ descriptions.
 ## After any live run
 
 1. Run `python -m probe report` and read `research/probes/PROBES.md`.
-2. Split each candidate's `results.jsonl` by host before accepting the blended verdict.
+2. Read the per-host breakdown in PROBES.md (or `per_host` in `summary.json`) before accepting
+   the blended verdict.
 3. Edit only `extract` and the URL list, keeping `expected_bytes_per_request` close to the
    observed p90. Then re-run with `-n 20` to save budget.
 4. Never hand-edit `traffic_ledger.json`.

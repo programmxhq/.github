@@ -4,6 +4,9 @@
 #   * Lulu robots.txt (https://www.luluhypermarket.com/en-ae/robots.txt, per search summary)
 #     disallows search pages, cart, checkout and my-account, and lists a sitemap. This probe
 #     therefore uses NO search URLs, only category and product pages.
+#     REVIEW 2026-10-03: that file belongs to www.luluhypermarket.com; every Lulu URL below is on
+#     gcc.luluhypermarket.com, which serves its own robots.txt (not seen). Fetch
+#     https://gcc.luluhypermarket.com/robots.txt by hand before the run; ?page= may be disallowed.
 #   * Carrefour UAE (Majid Al Futtaim) robots.txt was not visible in search; it publishes product
 #     sitemaps (https://www.carrefouruae.com/sitemaps/products0_ar.xml surfaced). Check
 #     https://www.carrefouruae.com/robots.txt by hand before the run.
@@ -27,8 +30,9 @@ candidate_ref: "research/reviews/desk_review.md#4 rank 2; research/desk/CANDIDAT
 public_only: true
 notes: >-
   Category (listing) pages are the monitor's main load: one request yields a page of prices for
-  the diff. A few product pages test EAN/detail enrichment cost. 30 URLs: 22 UAE, 4 other GCC
-  (Lulu KSA/KW/QA/BH), split ~50/50 Lulu/Carrefour.
+  the diff. A few product pages test EAN/detail enrichment cost. 30 URLs: 26 UAE, 4 other GCC
+  (Lulu KSA/KW/QA/BH), 13 Lulu / 17 Carrefour (www. added to the one bare-host URL in review,
+  so it does not cost a redirect hop).
 urls:
   # --- Lulu UAE: category pages (confirmed in search) ---
   - https://gcc.luluhypermarket.com/en-ae/grocery
@@ -55,7 +59,7 @@ urls:
   - https://www.carrefouruae.com/mafuae/en/c/bakery
   - https://www.carrefouruae.com/mafuae/en/c/00002                          # Carrefour private label
   - https://www.carrefouruae.com/mafuae/en/food-cupboard/organic-world-foods/usa/c/F1791100
-  - https://carrefouruae.com/mafuae/en/home-garden/kitchen-dining/food-storage-organising/c/NF8090200
+  - https://www.carrefouruae.com/mafuae/en/home-garden/kitchen-dining/food-storage-organising/c/NF8090200
   - https://www.carrefouruae.com/mafuae/en/c/F21600000?currentPage=1        # UNVERIFIED pagination param
   - https://www.carrefouruae.com/mafuae/en/c/F1700000                       # repeat poll
   - https://www.carrefouruae.com/mafuae/en/c/F1701240                       # repeat poll
@@ -71,7 +75,8 @@ headers:
 # ROBUST MARKER (used by the harness): distinct /p/<id> product ids anywhere in the body.
 extract:
   type: regex
-  pattern: '(/p/\d{4,}(?!\d))(?![\s\S]*?\1(?!\d))'
+  pattern: '(/p/\d{4,}(?!\d))'
+  distinct: true   # count each distinct group-1 id once (linear; replaces the quadratic dedupe lookahead)
 # NOT read by the harness; switch after the first live response. All UNVERIFIED.
 extract_precise:
   carrefour:

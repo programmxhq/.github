@@ -78,7 +78,8 @@ headers:
 # ROBUST MARKER (used by the harness): distinct tender ids across the four id styles above.
 extract:
   type: regex
-  pattern: '("tenderId"\s*:\s*\d+(?!\d)|STenderId=[A-Za-z0-9%+/=_-]{6,}(?![A-Za-z0-9%+/=_-])|TS\d{7,}E|/procurement/[a-z-]+/\d{3,}(?!\d))(?![\s\S]*?\1(?![\d%A-Za-z]))'
+  pattern: '("tenderId"\s*:\s*\d+(?!\d)|STenderId=[A-Za-z0-9%+/=_-]{6,}(?![A-Za-z0-9%+/=_-])|TS\d{7,}E|/procurement/[a-z-]+/\d{3,}(?!\d))'
+  distinct: true   # count each distinct group-1 id once (linear; replaces the quadratic dedupe lookahead)
 # NOT read by the harness; switch after the first live response.
 extract_precise:
   etimad_json: {type: json, path: "data"}                    # UNVERIFIED wrapper key

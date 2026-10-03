@@ -6,6 +6,10 @@
 #     uses SEO listing paths (/en/uae/jobs/<q>-jobs/, /jobs-in-<city>, /jobs-in-lahore) where
 #     possible; the Rozee /job/jsearch/ URLs are search-style and are the first to drop if
 #     robots.txt disallows them.
+#     REVIEW 2026-10-03: no robots.txt for any of the three boards surfaced in WebSearch. The 4 Rozee
+#     /job/jsearch/ URLs are site-search result pages (not a search engine, no login) and are the
+#     most likely disallow; Rozee also serves SEO listings at /category/-jobs-in-lahore (seen in
+#     search) which can replace them.
 #   * Job-board T&Cs usually forbid scraping and republishing listings. The actor must output
 #     only new-posting facts + link back, not full descriptions. Legal check before launch.
 #   * Incumbent count is higher than the desk said: search on 2026-10-03 surfaced 8 Bayt actors
@@ -67,7 +71,10 @@ headers:
 # ROBUST MARKER (used by the harness): distinct job ids from the three link styles above.
 extract:
   type: regex
-  pattern: '((?:/jobs/[a-z0-9-]+-|jid-|-jobs-)\d{6,}(?!\d))(?![\s\S]*?\1(?!\d))'
+  # REVIEW 2026-10-03: Bayt slug class widened to [A-Za-z0-9%-] so percent-encoded (Arabic) titles
+  # still count. Naukrigulf "-jid-190526000214" and Rozee "-lahore-jobs-1799200" shapes confirmed in search.
+  pattern: '((?:/jobs/[A-Za-z0-9%-]+-|jid-|-jobs-)\d{6,}(?!\d))'
+  distinct: true   # count each distinct group-1 id once (linear; replaces the quadratic dedupe lookahead)
 # NOT read by the harness; switch after the first live response. All UNVERIFIED.
 extract_precise:
   any_site_jsonld: {type: regex, pattern: '"@type"\s*:\s*"JobPosting"'}   # if listing pages embed JSON-LD

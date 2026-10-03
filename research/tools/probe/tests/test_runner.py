@@ -239,3 +239,24 @@ def test_ctrl_c_mid_request_still_records_bytes(origin, proxy, creds, cfg, cert,
     proxy.wait_idle()
     assert led["proxy_bytes_total"] > 0 and led["proxy_bytes_total"] <= proxy.total()
     assert led["runs"][-1]["status"] == "interrupted"
+
+
+def test_per_host_breakdown_in_summary_and_probes_md(origin, proxy, creds, cfg, cert):
+    # Two hostnames for the same fixture server (the test cert covers both): one serves rows, one is empty.
+    good = origin.url("/api/items?page=1")
+    bad = good.replace("localhost", "127.0.0.1").replace("/api/items?page=1", "/api/empty")
+    d = defn(origin, "/api/items?page=1", name="two-hosts", urls=[good, bad])
+    s = run(d, cfg, creds, cert, n=20)
+    assert s["verdict"] == "KILL" and s["block_rate"] == 0.5  # the blended verdict hides a clean host
+    ph = s["per_host"]
+    assert set(ph) == {"localhost", "127.0.0.1"}
+    assert ph["localhost"]["requests"] == 10 and ph["localhost"]["block_rate"] == 0 and ph["localhost"]["rows"] == 100
+    assert ph["127.0.0.1"]["block_rate"] == 1.0 and ph["127.0.0.1"]["rows"] == 0
+    assert ph["127.0.0.1"]["bytes_per_row"] is None and ph["127.0.0.1"]["cost_per_1k_rows_usd"] is None
+    assert sum(x["bytes"] for x in ph.values()) == s["total_proxy_bytes"]
+    assert sum(x["rows"] for x in ph.values()) == s["rows_total"]
+    assert ph["localhost"]["bytes_per_row"] == round(ph["localhost"]["bytes"] / 100, 1)
+    md = Path(cfg["paths"]["probes_md"]).read_text()
+    assert "## Per-host breakdown" in md
+    assert re.search(r"\| two-hosts \| localhost \| 10 \| 10 \| 0% \|", md)
+    assert re.search(r"\| two-hosts \| 127\.0\.0\.1 \| 10 \| 0 \| 100% \|", md)
