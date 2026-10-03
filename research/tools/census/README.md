@@ -18,8 +18,7 @@ The tool reads credentials from environment variables. If they are missing, it r
 # 0. Smoke test: 1 page, no token, so no account can be billed
 python census.py --no-auth --page-size 50 --max-pages 1 --fresh
 #    Check research/census_summary.json and spot-check rows against the Store website.
-#    Before any long run with a token, check that census_summary.json has spend_guard.available = true.
-#    If it is false, the token cannot read /v2/users/me/limits and the spend cap is NOT enforced.
+#    With a token, the run now refuses to start if account usage cannot be read (spend guard fails closed; override: --allow-unguarded).
 
 # 1. Full Store list. About 20-30 requests for roughly 20k Actors at 1000/page.
 python census.py --fresh            # or --no-auth if step 0 showed the Store works without a token
