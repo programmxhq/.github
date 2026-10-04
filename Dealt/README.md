@@ -62,6 +62,8 @@ The project uses a synchronized folder, so any `.swift` file added to `Dealt/Dea
 
 `DESIGN.md` has the full design spec and the balance notes.
 
+`BRAND.md` is the brand guide: name, icon, colours, type and voice. The App Store listing copy and screenshots are in `AppStore/`.
+
 ## Adding cards
 
 ```swift

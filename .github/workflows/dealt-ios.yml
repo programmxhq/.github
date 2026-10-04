@@ -66,7 +66,7 @@ jobs:
           # Clean status bar for screenshots.
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active \
-            --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+            --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
 
       - name: Build and test
         run: |

@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:Nunito;src:url(fonts/Nunito.ttf);font-weight:200 1000}
+html,body{margin:0;background:transparent}
+body{display:flex;align-items:center;justify-content:center;height:100vh}
+.lockup{display:flex;align-items:center;gap:44px}
+.mark{width:300px;height:300px}
+.word{font:900 300px/1 Nunito;letter-spacing:-4px;padding-bottom:28px}
+.light .word{color:#1C1838}.dark .word{color:#FFF8EC}
+</style></head><body>
+<div class="lockup" id="l"><img class="mark" src="svg/Mark.svg"><div class="word">Dealt</div></div>
+<script>document.getElementById('l').classList.add(location.hash.slice(1)||'light')</script>
+</body></html>
