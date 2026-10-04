@@ -27,8 +27,11 @@ jobs:
         include:
           - xcode: "16"
             ios: "18"
+            device: "iPhone"
+          # 6.9" device: its UI-test screenshots are App Store sized (1320x2868).
           - xcode: "26"
             ios: "26"
+            device: "iPhone 17 Pro Max"
     defaults:
       run:
         working-directory: Dealt
@@ -48,18 +51,22 @@ jobs:
         run: |
           UDID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
-          major = sys.argv[1]
+          major, wanted = sys.argv[1], sys.argv[2]
           d = json.load(sys.stdin)["devices"]
           key = lambda k: [int(x) for x in k.rsplit("iOS-", 1)[1].split("-")]
           ios = sorted((k for k in d if "iOS-" + major + "-" in k), key=key)
           for rt in reversed(ios):
               for dev in d[rt]:
-                  if dev["name"].startswith("iPhone"):
+                  if dev["name"] == wanted or (wanted == "iPhone" and dev["name"].startswith("iPhone")):
                       print(dev["udid"]); sys.exit()
-          sys.exit("no iPhone simulator for iOS " + major)
-          ' "${{ matrix.ios }}")
+          sys.exit("no " + wanted + " simulator for iOS " + major)
+          ' "${{ matrix.ios }}" "${{ matrix.device }}")
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
           xcrun simctl list devices available | grep "$UDID"
+          # Clean status bar for screenshots.
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active \
+            --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 
       - name: Build and test
         run: |

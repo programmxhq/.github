@@ -466,12 +466,7 @@ struct TombstoneShareCard: View {
                                style: .continuous)
     }
 
-    private var backdrop: LinearGradient {
-        LinearGradient(colors: [Color(red: 0.20, green: 0.16, blue: 0.45),
-                                Color(red: 0.36, green: 0.20, blue: 0.52),
-                                Color(red: 0.10, green: 0.07, blue: 0.22)],
-                       startPoint: .top, endPoint: .bottom)
-    }
+    private var backdrop: LinearGradient { Brand.night }
 
     var body: some View {
         ZStack {
@@ -525,10 +520,11 @@ struct TombstoneShareCard: View {
 
     private var footer: some View {
         HStack(alignment: .lastTextBaseline) {
-            Text("DEALT")
-                .font(.system(size: 15, weight: .heavy, design: .rounded))
-                .tracking(4)
-                .foregroundStyle(Color.white.opacity(0.75))
+            HStack(spacing: 6) {
+                BrandMark(height: 20, fanned: false)
+                Wordmark(size: 17)
+                    .foregroundStyle(Color.white.opacity(0.85))
+            }
             Spacer(minLength: 8)
             Text("Score " + String(score))
                 .font(.system(size: 17, weight: .heavy, design: .rounded))

@@ -195,9 +195,7 @@ struct StartView: View {
     private var titleRow: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("DEALT")
-                    .font(.system(size: 46, weight: .heavy, design: .rounded))
-                    .tracking(6)
+                Wordmark(size: 46)
                 Text("Life deals you three cards. Play one.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -209,8 +207,8 @@ struct StartView: View {
                     .padding(.top, 2)
             }
             Spacer(minLength: 8)
-            DecorFan()
-                .padding(.top, 8)
+            BrandMark(height: 44)
+                .padding(.top, 6)
         }
     }
 
@@ -531,30 +529,6 @@ private struct StepIndicator: View {
     }
 }
 
-/// Three tiny fanned cards next to the title.
-private struct DecorFan: View {
-    let faces: [String] = ["🌱", "🎲", "🕯️"]
-
-    var body: some View {
-        ZStack {
-            ForEach(0..<3, id: \.self) { i in
-                Text(faces[i])
-                    .font(.system(size: 14))
-                    .frame(width: 24, height: 34)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-                    }
-                    .rotationEffect(.degrees(Double(i - 1) * 14), anchor: .bottom)
-                    .offset(x: CGFloat(i - 1) * 8)
-            }
-        }
-        .frame(width: 52, height: 40)
-        .accessibilityHidden(true)
-    }
-}
-
 /// One ambition in the 2-column grid. Grows with Dynamic Type instead of clipping.
 private struct AmbitionTile: View {
     let ambition: Ambition
@@ -807,6 +781,12 @@ struct HallOfFameSheet: View {
                     } footer: {
                         Text("Forgets every past life and starts a brand-new family.")
                     }
+                }
+                Section {
+                } footer: {
+                    Text(Brand.credit)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 12)
                 }
             }
             .navigationTitle("Hall of Fame")
